@@ -1,0 +1,110 @@
+{
+  "table_of_contents": [
+    {
+      "title": "UEval: A Benchmark for Unified Multimodal Generation",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          72.9140625,
+          101.68292236328125
+        ],
+        [
+          537.6480712890625,
+          101.68292236328125
+        ],
+        [
+          537.6480712890625,
+          119.61572265625
+        ],
+        [
+          72.9140625,
+          119.61572265625
+        ]
+      ]
+    },
+    {
+      "title": "Abstract",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          282.09375,
+          254.07421875
+        ],
+        [
+          329.90625,
+          254.07421875
+        ],
+        [
+          329.90625,
+          266.44183349609375
+        ],
+        [
+          282.09375,
+          266.44183349609375
+        ]
+      ]
+    },
+    {
+      "title": "1 Introduction",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          69.328125,
+          487.65234375
+        ],
+        [
+          158.0030059814453,
+          487.65234375
+        ],
+        [
+          158.0030059814453,
+          500.698486328125
+        ],
+        [
+          69.328125,
+          500.698486328125
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          190
+        ],
+        [
+          "Line",
+          41
+        ],
+        [
+          "Text",
+          11
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageHeader",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/sample_1_page"
+}
