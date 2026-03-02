@@ -1,0 +1,1267 @@
+arXiv:supr-con/9411003v1  8 Nov 1994Density of states of a layered S/N d–wave superconductor
+W. A. Atkinson, J. P. Carbotte
+Department of Physics and Astronomy, McMaster University,
+Hamilton, Ontario, Canada L8S 4M1
+(August 23, 2013)
+Abstract
+We calculate the density of states of a layered superconduct or in which there
+are two layers per unit cell. One of the layers contains a d–wa ve pairing
+interaction while the other is a normal metal. The goal of thi s article is
+to understand how the d–wave behaviour of the system is modiﬁ ed by the
+coupling between the layer–types. This coupling takes the f orm of coherent,
+single particle tunneling along the c–axis. We ﬁnd that ther e are two physi-
+cally diﬀerent limits of behaviour, which depend on the rela tive locations of
+the Fermi surfaces of the two layer–types. We also discuss th e interference
+between the interlayer coupling and pairing interaction an d we ﬁnd that this
+interference leads to features in the density of states.
+74.20.-z, 74.20.Fg, 74.50.+r
+Typeset using REVT EX
+1
+I. INTRODUCTION
+One of the most interesting developments in the study of high –temperature (H Tc) super-
+conductors has been the idea that the gap is not isotropic wit hin the copper–oxide planes.
+There is considerable experimental evidence that this is th e case; angle resolved photoe-
+mission experiments1, for example, have directly observed an anisotropic gap in t heab–
+plane spectrum of Bi 2Sr2CaCu 2O8+δ. Furthermore, there have been a number of recent
+experiments2in which the behaviour of the system can be explained by gaps w hich have
+at least one node on the Fermi surface. There have also been a n umber of controversial
+tunneling experiments (for example Wollman et al3) in which the sign of the gap has been
+shown to change across the nodes. These experimental result s have been taken as strong
+support for a gap with d–wave symmetry within the copper–oxi de planes.
+The d–wave symmetry of the gap is an integral part of a number o f theories of super-
+conductivity, such as RVB4,5and spin–ﬂuctuation6–8models. There are also a large number
+of BCS–like calculations9–14(of which we have only mentioned a few) in which the ansatz
+is made that the gap has a d–wave structure. The one feature wh ich is common to all of
+these calculations is that they are 2–dimensional, and it is assumed that the eﬀects of the
+third dimension will be weakly perturbative. This assumpti on reﬂects the belief that the
+superconductivity of the H Tcmaterials occurs within the copper–oxide planes.
+The goal of this work is to consider the eﬀect that the third di mension will have on
+the properties of an otherwise d–wave system. In particular , we will calculate the super-
+conducting density of states (DOS) of a layered S/N system. I n this model, there are two
+layers in the unit cell. One of the layers (S) contains a d–wav e pairing interaction which
+drives the superconducting transition. The second layer (N ) is intrinsically normal in the
+sense that it contains no pairing interaction, although it s till becomes superconducting be-
+cause of its proximity to the S layer. Of the H Tcmaterials, this model has the most in
+common with YBa 2Cu3O7, where it is considered that the copper–oxygen planes conta in a
+superconducting pairing mechanism and the copper–oxygen c hains are intrinsically normal.
+2
+Our particular version of the layered S/N model is based on on e studied previously15–18,
+although the focus of these authors was somewhat diﬀerent th an here. In all cases, the
+authors considered the gap of the isolated superconducting plane to be isotropic, and the
+discussion focussed on the anisotropy introduced by the int erplane coupling. Abrikosov
+and Klemm15were interested in how the interplane coupling aﬀects the de nsity of states,
+the isotropy of the Raman spectrum and the behaviour of Tcand the gap. Buzdin et al16
+calculated the density of states, while Bulaevskii17considered various properties of a layered
+S/N model in the limits of very weak and very strong interlaye r coupling. Tachiki et al. have
+calculated a number of observable quantities (tunneling co nductance, optical conductivity,
+knight shift and nuclear magnetic relaxation rate) for a mor e complicated model in which
+there are ﬁve layers per unit cell. In this paper, the pairing in the S layer is chosen to have
+a dx2−y2symmetry and we are interested in how the interplane couplin g will change the
+density of states from the 2–dimensional case9,10.
+The layout of the paper is as follows: In section II we introdu ce a model for a layered S/N
+superconductor and derive a formula for the density of state s. In section III we calculate
+the DOS for diﬀerent choices of model parameters. The discus sion is broken up into two
+physically diﬀerent limits. In one case, the Fermi surfaces of the two bands (which result
+from the two layer types) are far apart in the Brillouin zone, while in the second case they
+coincide. The diﬀerence between these two limits is that, in the second case, there are
+important (non–perturbative) interference eﬀects betwee n the mean ﬁeld and the interplane
+coupling. In section IV we present a summary and discussion o f our results.
+II. THE MODEL
+In this section we introduce a model for a layered supercondu ctor, which is based on one
+proposed by Abrikosov15. In this model we consider two types of metallic layers, stac ked
+alternately one above the other in the z direction. These lay ers form two sublattices which we
+will assume are weakly coupled to each other. There is a BCS–l ike pairing potential localized
+3
+about the layers of the ﬁrst sublattice which is responsible for the superconductivity of the
+sample. The Hamiltonian for such a system can be written
+H=∑
+σ∫
+d3rΨ†
+σ(r)(H0+V1+V2)Ψσ(r)
++∑
+σσ′∫
+d3r d3r′Ψ†
+σ(r)Ψ†
+σ′(r′)I1(r,r′) Ψσ′(r′)Ψσ(r) (1)
+where Ψ σis the ﬁeld operator of spin σ. The operator H0is the free particle Hamiltonian,
+p2/2m, while V1andV2are the potentials associated with each of the sublattices. The
+BCS–like pairing potential is
+I1(r,r′) =−1/2∑
+ZV(x, y, x′, y′)δ(z−Z)δ(z′−Z),
+where Zare the z–values of the planes in the ﬁrst sublattice.
+If the electrons are tightly bound to their planes, then the e igenstates of H0+V1+V2
+are well approximated by eigenstates of the sublattice Hami ltonians H0+V1andH0+V2
+(which are assumed known). Eigenstates of H0+V1andH0+V2are not orthogonal to each
+other, but may be orthogonalised to form a new set of states, φik(r), i= 1,2 , which are
+no longer eigenstates of the sublattice Hamiltonians but wh ich satisfy∫d3r φ∗
+1k(r)φ2k′(r) =
+0. The orthogonalisation procedure will conserve the Bloch –like properties of the original
+eigenstates. If we deﬁne
+aikσ=∫
+d3r φ∗
+ik(r)Ψσ(r)
+then the Hamiltonian may be written
+H−Nµ=∑
+kσ[
+a†
+1kσa1kσξ1(k) +a†
+2kσa2kσξ2(k)]
++∑
+kσ[
+t(k)a†
+1kσa2kσ+t∗(k)a†
+2kσa1kσ]
+(2)
+−∑
+k[
+∆ka†
+1k↑a†
+1−k↓+ ∆∗
+ka1−k↓a1k↑]
+where
+ξj(k) =∫
+d3r φ∗
+jk(r)(H0+V1+V2−µ)φjk(r)
+4
+t(k) =∫
+d3r φ∗
+1k(r) (H0+V1+V2)φ2k(r)
+and
+∆k≡1
+Ω∑
+k′Vkk′⟨a1−k′↓a1k′↑⟩. (3)
+Here Ω is the volume of the sample and ⟨⟩denotes a thermal average. Equation (3) is
+the self–consistent equation which follows from making a me an ﬁeld approximation for the
+pairing interaction in equation (1). The form of the potenti al,Vkk′, comes from assuming a
+singlet pairing of electrons of opposite k. We ﬁnd that
+Vkk′=∑
+Z∫
+dxdy dx′dy′φ∗
+1k(x, y, Z )φ∗
+1−k(x′, y′, Z)
+×V(x, y, x′, y′)φ1−k′(x′, y′, Z)φ1k′(x, y, Z ),
+which, in the limit in which the electrons are tightly bound t o the planes, has no kzork′
+z
+dependence. The interplane hopping term, t, has been chosen to conserve k, which makes
+sense if V1andV2have the same periodicity and we have a clean metal.
+In the Nambu formalism, the Hamiltonian can be written
+H−Nµ=∑
+kA†(k)Q(k)A(k) + const (4)
+where
+A(k) =
+a1k↑
+a†
+1−k↓
+a2k↑
+a†
+2−k↓
+(5)
+and
+Q=
+ξ1(k)−∆kt(k) 0
+−∆∗
+k−ξ1(−k) 0 −t∗(−k)
+t∗(k) 0 ξ2(k) 0
+0−t(−k) 0 −ξ2(−k)
+. (6)
+5
+The diagonalisation of the matrix, Q(k), will be simpliﬁed if we note that the symmetries
+t(k) =t∗(−k) and ξi(k) =ξi(−k) follow from time reversal symmetry. Then the energy
+eigenvalues are E1=E+,E2=E−,E3=−E−,E4=−E+, with
+E2
+±=ξ2
+1+ξ2
+2+ ∆2
+k
+2+t2
+±√[ξ2
+1−ξ2
+2+ ∆2
+k
+2]2
++t2[(ξ1+ξ2)2+ ∆2
+k] (7)
+=ξ2
+1+ξ2
+2+ ∆2
+k
+2+t2
+±√[ξ2
+1+ξ2
+2+ ∆2
+k
+2+t2]2
+−(t2−ξ1ξ2)2−(ξ2∆k)2
+(8)
+(we simplify our notation by understanding t2to mean |t|2and ∆2
+kto mean |∆k|2throughout
+this paper). The ﬁrst expression for E±, given by equation (7), is useful for describing the
+weakly coupled (small t) limit, while the second, equation (8), is useful for descri bingE−
+near its minima.
+The Hamiltonian now becomes
+H−Nµ=∑
+k4∑
+i=1ˆA†
+i(k)ˆAi(k)Ei(k) + const (9)
+where ˆAi(k) is the quasiparticle annihilation operator associated wi th the ithenergy band.
+The operator, ˆAi(k), is deﬁned by
+ˆAi(k) =4∑
+j=1U†
+ij(k)Aj(k), (10)
+andU(k) is the 4 ×4 matrix which diagonalises Q:Uij=Ui(Ej) with
+Ui(Ej) =1√
+C
+(Ej−ξ2)A
+−(Ej+ξ2)B
+tA
+tB
+(11)
+A=t2−(∆k+Ej+ξ1)(Ej+ξ2)
+6
+B=t2−(∆∗
+k+Ej−ξ1)(Ej−ξ2)
+C=A2[t2+ (Ej−ξ2)2] +B2[t2+ (Ej+ξ2)2].
+We are now in a position to solve for the temperature dependen ce of the gap, ∆ k. We
+do this by writing equation (3) in terms of the quasiparticle operators, ˆAj(k). We get
+∆k=1
+Ω4∑
+i=1∑
+k′Vkk′U1i(k′)U2i(k′)f(−Ei(k′)) (12)
+where f(x) = [1 + exp( βx)]−1is the Fermi distribution function. Equation (12) is a self–
+consistent equation which can be solved numerically for the gap as a function of temperature.
+Once the gap at T= 0 is known, then the density of states (DOS) may be calculate d.
+The density of states is
+ρ(ω) =−2
+Nπ∫
+d3rImGR
+↑↑(r, r, ω)
+where the factor 2 is because we are only counting spin up elec trons and N is the number
+of unit cells in the crystal. GR
+σσ′is the retarded Green’s function:
+GR
+σσ′(r, r′, w) = lim
+δ→0+∫∞
+−∞dt ei(w+iδ)t
+×⟨{Ψσ(r, t),Ψ†
+σ′(r′,0)}⟩θ(t)
+where θ(t) is the step function and { }are anticommutating brackets. If we write
+Ψ↑(r, t) =2∑
+i=1aik↑(t)φik(r)
+=4∑
+i=1{
+U1i(k)ˆAi(k, t)φ1k(r)
++U3i(k)ˆAi(k, t)φ2k(r)}
+(13)
+and
+ˆAi(k, t) =e−iEi(k)tˆAi(k,0)
+then
+7
+ρ(ω) =2
+N4∑
+i=1∑
+k[
+U1i(k)2+U3i(k)2]
+δ(w−Ei(k)). (14)
+The term proportional to U1i(k)2(U3i(k)2) gives the contribution to the density of states of
+the ﬁrst (second) sublattice made by the ithband. It is therefore possible to write the DOS
+as the sum of the two sublattice densities of states
+ρ(ω) =ρ1(ω) +ρ2(ω). (15)
+We will evaluate both the DOS and the gap equation, (12), in th e following section.
+III. A DISCUSSION OF NUMERICAL RESULTS
+A. Speciﬁcation of the Model
+The goal of this section is to discuss the density of states of our model. We will do this
+by examining the features of our quasiparticle energy dispe rsions. To begin with however,
+we must choose a speciﬁc form for our Hamiltonian (equation ( 2)). We take
+ξi(k) =−2σi[cos(kx) + cos( ky)]−µi, i= 1,2 (16)
+which comes from assuming that the electrons are described b y tight binding dispersions
+within the planes. The Brillouin zone is −π < k x, ky≤π,−π/d < k z≤π/dwhere dis the
+lattice constant in the z–direction. Since ξidescribes the energy of an electron in a Bloch
+state of one of the sublattices, it will have a weak kzdependence. However, a much larger kz
+dependence will come from t(k), which describes the nearest neighbour hopping of electro ns
+between layers of diﬀerent types. The two chemical potentia ls in (16) allow the two bands
+to be oﬀset from each other. The most signiﬁcant feature of th is choice of ξiis that there are
+saddle points at ( kx, ky) = (0 , π) (at which ξi=−µi) and other symmetry related points. A
+great deal has been written about model systems in which the s addle points lie at the Fermi
+surface where they play an important role in the dynamics of t he system19. We wish to avoid
+this case since the aim of this paper is to understand the role of the interlayer coupling. For
+all of the results presented in this paper, then, we have take n|µ1|,|µ2|>max(|t(k)|,|∆k|).
+8
+The form of the interlattice coupling follows from the assum ption that that the electrons
+are tightly bound to the planes:
+t(k) =t1eikzd1+t2e−ikzd2. (17)
+Heret1andt2are complex constants, and the planes are alternately a dist anced1andd2
+apart so that d=d1+d2. The condition t(k) =t∗(−k) will be satisﬁed if t1andt2have
+the same phase. For our numerical calculations we reduce the number of free parameters by
+setting d1=d2=d/2,t1=t2=t0/2 so that
+t(k) =t0cos(kzd/2). (18)
+One of the things which will become apparent is that, althoug h the ﬁne structure of certain
+features of the DOS depend on the speciﬁc form we choose for t(k), the existence and
+important properties of these features are independent of t his choice.
+The pairing potential is taken to be separable so that Vkk′=V ηkηk′, with ηk= 1 for
+s–wave superconductors and ηk= cos( kx)−cos(ky) for d–wave superconductors. In this case
+we can deﬁne ∆ 0by
+∆0=V
+Ω∑
+kηk⟨a1−k↓a1k↑⟩, (19)
+and equation (12) will simplify to
+∆0=V
+Ω4∑
+i=1∑
+kηkU1i(k)U2i(k)f(−Ei(k)), (20)
+with ∆ k= ∆ 0ηk. We solve equation (20) for Tcand graph the results in Fig. 1. We can see
+that the critical temperature decreases rapidly with incre asingt0which suggests that a weak
+coupling of the planes is necessary for any reasonable descr iption of a H Tcsuperconductor. It
+has been suggested20,21, however, that the inclusion of phonon mediated interlayer coupling
+may actually lead to an increase in Tcwith coupling strength. We also calculate ∆ 0(T= 0)
+from equation (20) and plot ∆ 0(T= 0)/Tcin Fig. 1. We can see that ∆ 0(T= 0)/Tc
+increases rapidly for t0larger than .4σ1. For YBCO the value of 2∆ max/Tcdepends on the
+9
+experiment from which it is determined, but it is generally22found to be less than 8. It is
+important to remember that the experimentally measured val ue of the gap is typically the
+lowest energy peak in the quasiparticle excitation spectru m, which is not necessarily related
+in any simple fashion to the order parameter. However, as a ro ugh estimate, we can limit
+max(2∆ k) = 4∆ 0<8 so that, from Fig. 1, t0/σ1< .5.
+Once ∆ 0(T= 0) is determined, we can proceed to calculate the DOS for our Hamiltonian.
+Our discussion of the DOS will be aided by two observations. T he ﬁrst is that equation (16)
+implies that
+ξ2=σ2
+σ1ξ1+µ1σ2−µ2σ1
+σ1(21)
+and the second is that the Brillouin zone boundary, kx, ky=±πmaps into the diamond
+shaped boundary
+|∆k|= 2∆ 0[
+1−|µi+ξi|
+4σi]
+(22)
+with−4σi−µi< ξi<4σi−µiandi= 1 or 2. Equations (21) and (22) allow us to discuss
+the system using ξ1(orξ2for that matter) and ∆ k, rather than kxandky, as independent
+variables.
+We will consider two limiting cases of Eqn. (21). In the ﬁrst c ase|µ1σ2−µ2σ1|/σ1≫∆0
+so that ξ2
+1+ξ2
+2≫∆2
+keverywhere in the Brillouin zone. In the second case, we take the
+Fermi surfaces of the sublattices to coincide, so that µ1σ2−µ2σ1= 0. The fundamental
+diﬀerence between the two cases is that it is possible to dist inguish band structure eﬀects
+from superconductivity eﬀects in the ﬁrst case, while in the second case the interplane
+coupling plays an important role at the Fermi surface.
+B. Case I: Distinct Fermi Surfaces
+We begin by discussing the quasiparticle energy dispersion s. First of all, for most regions
+of the Brillouin zone ξ2
+1+ ∆2
+k−ξ2
+2≫t2,∆2
+kand we see from Eqn. (7) that E±approaches
+the limiting form
+10
+E+∼max(√
+ξ2
+1+ ∆2
+k,|ξ2|)
+E−∼min(√
+ξ2
+1+ ∆2
+k,|ξ2|). (23)
+In Fig. 2 we plot E±along the line kx=ky,kz= 0 and compare it with |ξ2|and√
+ξ2
+1+ ∆2
+k.
+We have chosen an s–wave gap for illustrative purposes in the ﬁgure, since a d–wave gap
+would vanishe along this line. In regions of the Brillouin zo ne where (23) is approximately
+true, the eﬀect of the matrix elements Uijwill be to associate√
+ξ2
+1+ ∆2
+kwith the ﬁrst
+sublattice and |ξ2|with the second sublattice, so that the integrands in equati on (14) will
+become
+1
+2[
+1 +ξ1√
+ξ2
+1+∆2
+k]
+δ(ω−√
+ξ2
+1+ ∆2
+k)
++1
+2[
+1−ξ1√
+ξ2
+1+∆2
+k]
+δ(ω+√
+ξ2
+1+ ∆2
+k) (24)
+forρ1and
+δ(ω−ξ2) (25)
+forρ2. For most energies, then, the DOS will simply look like the DO S of the decoupled9,10
+(small t) limit, which we show in Fig. 3
+It is the regions where the interlayer coupling has an import ant eﬀect which we will
+discuss in the most detail. In Figs. 4, 5 and 6 we show the densi ties of states for nonzero
+interlayer coupling. These have a number of features that ar e absent in the uncoupled case,
+and we will discuss these features in turn.
+The ﬁrst thing which is clear is that, as t0is increased and the system goes from be-
+ing 2–dimensional to 3–dimensional, the logarithmic diver gences associated with the van
+Hove singularities (both the superconducting one and those intrinsic to ξ1andξ2) become
+broadened peaks23. This process is particularly clear in Figs. 4 and 5 where the intrinsic
+singularities at ω=.8 inρ1andω=−.4 inρ2are broadened considerably by t0.
+The interlayer coupling is also important in regions of the B rillouin zone where t2is of
+the order of ξ2
+1+ ∆2
+k−ξ2
+2. The eﬀect of the coupling is to create avoided band crossing s
+wherever
+11
+ξ2
+1+ ∆2
+k−ξ2
+2= 0. (26)
+In Fig. 2, for example, we can see that there are two avoided cr ossings, one at kx=ky= 1.57,
+and one at kx=ky= 1.32.
+At one of the avoided crossings ( kx=ky= 1.57 in Fig. 2), ξ1andξ2have the same sign
+and (expanding E±in powers of ∆ 0)
+E±∼ |ξ′| ± |t(k)|+O(∆2
+0
+ξ′), (27)
+where ξ1=ξ′is the solution to Eqns. (26) and (21) for which ξ1andξ2have the same sign.
+The energy diﬀerence of the bands at the avoided crossing is ∼2|t(k)|. We can see from
+Fig. 2 that this avoided crossing does not introduce a van Hov e singularity and, as a result,
+we do not ﬁnd any feature in the DOS of Figs. 4 and 5 at this energ y. On the other hand, in
+Fig. 6, we ﬁnd that, because we have let µ1=µ2, the avoided crossing occurs at the intrinsic
+van Hove singularities of ξ1andξ2. The result of this is that the logarithmic peaks evident
+in Fig. 3 at ω∼.8 are reduced far more than in Fig. 5, where the avoided crossi ng is far
+from the singularities. This is an important result because it shows that models in which
+the van Hove singularity plays an important role (ie. it is ne ar the Fermi surface) cannot
+also have a band crossing near the Fermi surface.
+For the second avoided band crossing (at kx=ky= 1.32 in Fig. (2)), ξ1andξ2have
+opposite sign. Again we can expand E±in powers of ∆ 0, and we ﬁnd that the avoided
+crossing occurs at
+E±=√
+ξ′′2+t(k)2±|t(k)∆k|√
+ξ′′2+t(k)2+O(∆2
+0
+ξ′′) (28)
+(ξ1=ξ′′is the solution to (26) and (21) for which ξ1andξ2have opposite sign). We can see
+from Fig. 2 that there is actually a band gap of width
+E+−E−∼2|t(k)∆k|√
+ξ′′2+t(k)2+O(∆2
+0
+ξ′′) (29)
+at this point. What is interesting about this gap is that it on ly exists in the superconducting
+state (since it is proportional to ∆ k) and that it forms awayfrom the Fermi surface. This is
+12
+unusual since the eﬀects of superconductivity normally man ifest themselves near the Fermi
+surface. In Fig. 4, these structures are clearly visible at ω∼ξ′′= 0.55 in the ﬁrst sublattice
+andω∼ −ξ′′in the second sublattice. In Fig. 5, the larger value of t0shifts the location of
+the minima slightly to ω=±0.65. In Fig. 6, the structures are clearly visible at ω=±0.4.
+The widths of the gap–like structures are given approximate ly by
+E+−E−⏐⏐⏐⏐max∼4t0∆0√
+ξ′′2+t2
+0[
+1−|µ1+ξ′′|
+4σ1]
+(30)
+since the maximum value of ∆ kallowed for ξ1=ξ′′is given by Eqn. (22). The source of this
+gap is not immediately obvious, but the proportionality of E qn. (30) to t0∆0suggests that
+it results from an interference of interlayer coupling and t he mean ﬁeld. In section IIID we
+will show that this is in fact the case, and we will discuss why these gaps appear on opposite
+sides of the Fermi surface in each of the sublattices.
+The ﬁnal place where the interlayer coupling is important is near the Fermi surface,
+where it inﬂuences the superconducting properties of the sy stem. In Fig. 2 we see that E−
+has two local minima which are related to the superconductin g gaps of the two sublattices.
+We expand E−(Eqn. (8)) in ( t2−ξ1ξ2) and ∆2
+kto get
+E2
+−∼(t2−ξ1ξ2)2+ (∆ kξ2)2
+ξ2
+1+ξ2
+2+ 2t2. (31)
+Equation (31) will vanish whenever ∆ k= 0 and t(k)2=ξ1ξ2. This happens for two values
+ofξi, which we denote by ξ(j)
+iwithj= 1,2. From Eqn. (21) it is straightforward to show
+that
+ξ(j)
+1=µ2σ1−µ1σ2
+2σ2
++(−1)j√
+(µ2σ1−µ1σ2)2+ 4σ1σ2t2(k)
+2σ2(32a)
+ξ(j)
+2=−µ2σ1−µ1σ2
+2σ1
++(−1)j√
+(µ2σ1−µ1σ2)2+ 4σ1σ2t2(k)
+2σ1. (32b)
+We then estimate the sizes of the superconducting gaps by sub stituting the equations (22),
+ξi=ξ(j)
+iandt=t0into Eqn. (31):
+13
+E−∼2∆0⏐⏐⏐⏐⏐⏐ξ(j)
+2
+ξ(j)
+1+ξ(j)
+2⏐⏐⏐⏐⏐⏐
+1−|µ1+ξ(j)
+1|
+4σ1
+ (33)
+In the limit that t0becomes small, the gap sizes become
+E−∼2∆0[
+1−|µ1|
+4σ1]
++∆0t(k)2
+2(µ2σ1−µ1σ2)[
+sgn(µ1)−σ1(4σ1− |µ1|)
+µ2σ1−µ1σ2]
+(34)
+and
+E−∼2∆0[σ2t0
+µ2σ1−µ1σ2]2[
+1−|µ2|
+4σ2]
+. (35)
+Equation (34) shows how a weak interlattice coupling aﬀects the gap in the intrinsically
+superconducting sublattice. One interesting point is that whether t0increases or decreases
+the gap size depends on the details of the band structure. Whe nt0= 0 we have an approx-
+imate expression for the location of a logarithmic singular ity in a two–dimensional d–wave
+superconductor. The exact expression9is ∆ 0(4σ1− |µ1|)/√
+4σ2
+1+ ∆2
+0. Equation (35) shows
+the size of the induced gap in the intrinsically normal subla ttice.
+The gaps described by equations (34) and (35) will appear in b othρ1andρ2(this has also
+been pointed out17for a similar model). The magnitudes of the contributions ar e determined
+by the matrix elements, Uij, in Eqn. (14). In the appendix, we derive the low energy DOS
+and can see explicitely how the matrix elements behave. In pa rticular, Eqns. (A9) describe
+the strength with which each of the minima of E−(labelled by i= 1,2) is reﬂected in ρ1
+(from U2
+1) and ρ2(from U2
+2). In the weakly coupled (small t0) limit, for example, equations
+(32) tell us that U2
+1∼1,U2
+2∼(σ1t)2/(µ2σ1−µ1σ2)2for the intrinsic gap given by (34),
+while U2
+1∼(σ2t)2/(µ2σ1−µ1σ2)2,U2
+2∼1, for the induced gap given by (35). In other
+words, features associated with one sublattice are reﬂecte d in the other sublattice with a
+strength proportional to t2
+0. We can see quite clearly in Fig. 6, for example, that both gap s
+are reﬂected in both densities of states.
+The main results of the appendix are expressions for the low e nergy DOS in which a)
+two of the three k–space integrations have been performed ap proximately (Eqn. A10) and
+14
+b) the ﬁnal integration is performed in a crude approximatio n in the small t0limit to ﬁnd
+ρ1(Eqns. (A16)) and ρ2(Eqns. (A17)). The important features of these expressions can be
+summarised simply. First of all, the quantity t∗(ω) (Eqn. (A15)) gives the energy scale of the
+induced gap. In fact, the equation t(kz) =t∗(ω) is just a rearrangement of the expression
+(35) for the induced gap. Eqn. (A16a) (with λ±given by Eqns. (A11a) and (A11b)) is an
+approximate expression for the d–wave gap in the S sublattic e. Eqns. (A16b) and (A16c) are
+the corrections (of order t2
+0) toρ1inside and outside the induced gap respectively. Similarly ,
+Eqns. (A17a) and (A17b) give ρ2inside and outside the induced gap respectively. One of
+the most important features of the induced gap is that, since botht(kz) and ∆ khave nodes,
+there are a large number of low energy excitations. The densi ty of states still vanishes inside
+the induced gap but instead of vanishing linearly, it vanish es with a divergent slope. We can
+see this in Fig. 7 where we compare the low ωDOS, calculated numerically from Eqn. (14),
+with the approximate expressions derived in the appendix.
+C. Case II: Coincident Fermi Surfaces
+We will now consider the case where the Fermi surfaces of the t wo sublattices coincide,
+which requires that µ1σ2=µ2σ1so that Eqn. (21) becomes
+ξ2=σ2ξ1
+σ1. (36)
+Away from the Fermi surface, the structure of the DOS is that o f the uncoupled ( t0= 0)
+limit for exactly the same reasons as in the previous case. Ne ar the Fermi surface, however,
+the DOS behaves quite diﬀerently and is somewhat more compli cated to describe, though a
+partially quantitative understanding is still possible. I n Fig. 8 we can see that E−still has
+a double minimum structure throughout much of the Brillouin zone but that it is no longer
+possible to associate either of the minima with a particular sublattice. In Figs. 9 and 10,
+we show the DOS for two diﬀerent strengths of interlayer coup ling. In Fig. 9, the density of
+states exhibits a nested gap structure at the Fermi surface. For larger values of t0(Fig. 10),
+15
+the outer structure is no longer identiﬁable as a gap and the D OS is similar in appearance
+to that of a 2–dimensional d–wave material. However, as we sh all see, the dependence of the
+gap width on the order parameter, ∆ 0, is vastly diﬀerent than in the 2–dimensional case.
+The complicated structure of Figs. 9 and 10 is due to the mixin g of band structure and
+superconductivity eﬀects at the Fermi surface. Because of t his, it is not possible to replicate
+the analysis of the last section where we were able to identif y gap–like structures in the DOS
+with features of the energy spectrum. Instead, it is necessa ry to resort to the brute–force
+method of identifying saddle point singularities in E±, and determining which features in
+the ﬁgures they are responsible for. The method used below is approximate and works well
+provided that ∆ 0/σ1≪1.
+Since ﬁnding the zeros of ∇kE±is diﬃcult, our approach is to set ∂E±/∂ξ1= 0 to ﬁnd
+the surfaces of extrema of E±with respect to ξ1, and then to assume that the van Hove
+singularities are at the extremal values of |t(k)|and|∆k|on this surface. The extremal values
+of|t|are simply zero and t0, which is actually what we would ﬁnd by setting ∇kE±= 0
+anyway. On the other hand, the extremal values of |∆k|are either zero, or given by Eqn. (22).
+Since this last constraint depends on ξ1, it is wrong to treat ∆ kas independent when taking
+∂E±/∂ξ1. Providing that ∆ 0is small, however, the approximation is good and introduces
+an error of O(∆3
+0/σ2
+1) to the energies of the van Hove singularities.
+We begin by substituting equation (36) into the expression f orE±(equation (7)) and
+setting ∂E±/∂ξ1= 0. We ﬁnd that there are two solutions:
+ξ1= 0 (37)
+(for both E+andE−), and
+ξ2
+1=σ1(σ2
+1+σ2
+2)|t(k)|√
+t(k)2(σ1+σ2)2+ 2σ2∆2
+k(σ1−σ2)−σ2
+1σ2[∆2
+k(σ1−σ2) + 2t(k)2(σ1+σ2)]
+σ2(σ1+σ2)(σ1−σ2)2
+(38)
+(forE−only). This second equation gives the location of the two min ima of E−and only
+has positive solutions for ξ2
+1if
+16
+t(k)2>σ2∆2
+k[
+(σ1+σ2)(σ2
+1+σ2
+2)−2σ3
+1+ (σ2
+1+σ2
+2)√
+σ2
+2+ 2σ1σ2+ 2σ2
+1]
+(σ1+σ2)4. (39)
+The important diﬀerence, then, between Figs. 8(a) and 8(b) i s the size of |t(k)|. This
+crossover in behaviour was noted previously16, for the slightly simpler model in which ξ1≡ξ2
+and ∆ k≡∆0. Now at ξ1= 0,
+E±=√(∆k
+2)2
++t2±⏐⏐⏐⏐∆k
+2⏐⏐⏐⏐, (40)
+while when ξ1is given by (38),
+E2
+−=2|t(k)|σ1σ2√
+t(k)2(σ1+σ2)2+ 2σ2∆2
+k(σ1−σ2)−σ2[∆2
+kσ2(σ1−σ2) + 2t(k)2σ1(σ1+σ2)]
+(σ1+σ2)(σ1−σ2)2.
+(41)
+We ﬁrst describe the saddle points at which ξ1= 0. The extremal values of |t|are|t|= 0
+and|t|=t0, and the extremal values of ∆ kare zero and (from (22))
+∆′= 2∆ 0[
+1−|µ1|
+4σ1]
+. (42)
+Of the four points in the Brillouin zone just described, only two are actually saddle points
+(as opposed to band minima). There will be a saddle point in E+at ∆k= ∆′,t(k) = 0 at
+which
+E+= ∆′. (43)
+There will also be saddle points in E+andE−at ∆k= ∆′,t(k) =t0at which
+E−=√(∆′
+2)2
++t2
+0−∆′
+2(44)
+E+=√(∆′
+2)2
++t2
+0+∆′
+2. (45)
+The double minimum, with energy given by (41) will also have t wo saddle points, though
+they are somewhat more complicated to describe. First of all , there will only be saddle
+points if the inequality (39) is satisﬁed for t=t0and ∆ = ∆′′. The quantity, ∆′′is the
+17
+solution to the pair of equations, (38) and (22) with t(k) =t0. These equations can be
+solved iteratively in a straightforward fashion, and will y ieldtwoclosely spaced solutions
+corresponding to the two slightly diﬀerent energies at whic h the minima of E−intersect the
+Brillouin zone boundary. The energy of the saddle point is th en given by Eqn. (41).
+In Fig. 9, ∆′= 0.14, and the singularities at ±∆′can be associated with the outer gap
+in the nested gap structure. If we recall Eqn. (34) and the dis cussion which follows, we
+will recognize that ∆′is approximately the energy of the gap in a 2–dimensional d–w ave
+superconductor. In Fig. 10, however, the nested gap structu re is no longer clear and, and
+although there are features at ±∆′=±0.23, they do not appear as a gap–like structure.
+In Fig. 10, the gap width is actually given by Eqn. (41) which g ives the closely spaced sets
+of singularities ω=±0.072 and ω=±0.096. Eqn. (41) makes it clear that the structure
+in the DOS which we naively associate with the superconducti ng gap is, in fact, due to a
+complicated mixing of the gap and the interlayer coupling. I t is an important point that
+a tunneling experiment might not be able to distinguish betw een Fig. 10 and the density
+of states of a 2–dimensional d–wave superconductor ( ρ1in Fig. 3). In this case, then, a
+tunneling experiment would reveal very little about either the interlayer coupling or the
+nature of the pairing interaction.
+In Fig. 9, the singularities due to Eqn. (41) are at ω=±0.0431 and ω=±0.0426. They
+are responsible for the inner gap in the nested gap structure . There is also a van Hove
+singularity nearby, at ω= 0.05, which comes from Eqn. (44). It is diﬃcult to see because of
+its close proximity to the other singularities, but in Fig. 1 0, this feature is clear and is at ω=
+±0.30. Once again, this feature is the result of the interferenc e of interplane coupling with
+the mean ﬁeld and it cannot be considered a perturbation of ei ther a superconducting gap or
+a band gap. In Fig. 9, Eqn. (45) describes the smearing of the l ogarithmic singularity due to
+the intrinsic superconductivity of the ﬁrst sublattice. It gives van Hove singularities at ω=
+±0.195. This should be compared with the second term of Eqn. (34) , whose kzdependence
+also smears the logarithmic singularity associated with th e intrinsic gap. The diﬀerence is
+that, in (34), tappears as a perturbation, while in (45), the smearing is inh erently non–
+18
+perturbative. In Fig. 10, the van Hove singularities are at ω=±.534. The large broadening
+of the logarithmic singularity has caused it to overlap adja cent features so that it is not
+obvious that it is related to the singularity at ∆′. The remaining features in the DOS of
+Figs. 9 and 10 are due to the inherent structure of ξ1andξ2.
+D. Discussion of the Superconducting Band Gap
+In section IIIB we discussed the sublattice densities of sta tes in the limit |µ1σ2−µ2σ1| ≫
+∆0σ1. We found that, in addition to the expected band and supercon ducting gaps, there
+were gap–like structures which appeared in the superconduc ting state awayfrom the Fermi
+surface. This is surprising since the eﬀects of superconduc tivity normally manifest them-
+selves at the Fermi surface. A further property of these stru ctures is that, if in one sublattice
+a gap–like structure should appear at some energy, ω, then there will be a similar structure
+in the other sublattice at energy −ω. The purpose of this section is to understand the source
+of these unusual gap–like structures.
+The ﬁrst clue to the nature of the structures is in the express ion (30), which shows that
+the gap width is proportional to ∆ 0t0. This suggests that there is an interference between
+the interlayer coupling and the mean ﬁeld. In order to examin e this interference further, we
+will write out an equation for the Green’s function in which t he interlayer coupling and the
+mean ﬁeld are treated as perturbations. The Hamiltonian, Eq n. (4), can be written as
+H−Nµ=∑
+kA†(k){Q0+Q1}A(k) + const (46)
+where
+Q0=
+ξ1(k) 0 0 0
+0−ξ1(−k) 0 0
+0 0 ξ2(k) 0
+0 0 0 −ξ2(−k)
+(47)
+and
+19
+Q1=
+0−∆kt(k) 0
+−∆∗
+k0 0 −t∗(−k)
+t∗(k) 0 0 0
+0−t(−k) 0 0
+. (48)
+Equation (48) is treated like a perturbation. The temperatu re Green’s function is deﬁned
+asGij(k;τ) =−⟨TAi(k,−iτ),A†
+j(k,0)⟩, where Tis the time–ordered product and the time
+dependence of Ai(k, t) is determined by the full Hamiltonian, Q. It is straightforward to
+show that
+Gij(iζn) =G0
+ij(iζn) +4∑
+l,m=1G0
+il(iζn)Q1
+lmGmj(iζn). (49)
+where G(iζn) and G0(iζn) are the Fourier components of G(τ) and G0(τ) and ζn=π(2n+
+1)/βare the Matsubara frequencies. The uncoupled Green’s funct ion,G0
+ij, is the full Green’s
+function with t0= ∆ 0= 0. It is easy to show that G0
+ij(iζn) =δij[iζn−Q0
+ii]−1.
+With a little work we are able to write out equation (49) for G11explicitely:
+G11=G0
+11+G0
+11∆kG0
+22∆∗
+kG11+G0
+11tG0
+33t∗G11
++G0
+11∆kG0
+22t∗G41 (50a)
+G41=G0
+44tG0
+22∆∗
+kG11+G0
+44tG0
+22t∗G41. (50b)
+The Green’s functions, G11andG33, describes the propagation of spin–up electrons in the
+ﬁrst and second sublattices respectively. On the other hand ,G22andG44describe the
+propagation of spin–down holes in the ﬁrst and second sublat tices. The unusual term, G41,
+is essentially deﬁned by Eqn. (50b) and it describes an elect ron which both hops between
+the planes and interacts with the mean ﬁeld.
+In Figs. 11(a) and 11(b) we write Eqns. (50a) and (50b) out in d iagrammatic form. In
+part (a) we see that there are three processes which modify th e propagation of an electron.
+The ﬁrst of these processes, which simply describes the hopp ing of electrons between adjacent
+20
+layers, would appear in any band structure calculation invo lving two atoms per unit cell.
+The eﬀect of this term is to cause the two bands, ξ1andξ2, to repel each other wherever
+they cross so that we have avoided band crossings whenever ξ1=ξ2. The second process
+in Fig. 11(a) describes the intrinsic superconductivity of the ﬁrst sublattice. It is useful,
+however to interpret this in the same way we interpreted the ﬁ rst process: as a coupling of
+two bands. The important point here, however, is that the two bands which are coupled
+by the mean ﬁeld are not the two sublattice bands, but are, ins tead, the spin–up and spin–
+down components of the band in the ﬁrst sublattice. Moreover , the coupling is actually
+between spin-up electron states and spin–down hole states. The terms in the Hamiltonian
+responsible for the superconductivity can be interpreted a s describing transitions between
+the electron and hole bands in exactly the same way that the te rms responsible for interlayer
+coupling describe transitions between electron bands. Thi s is clear in Fig. 11(a) where an
+interaction with the mean ﬁeld changes an electron into a hol e. The second term in Fig.
+11(a), then, will cause an avoided crossing in the quasipart icle energies wherever the original
+electron and hole bands cross. Since the dispersion of the or iginal hole band is just −ξ1, the
+superconducting band gap will open up at ξ1=−ξ1= 0. We can see that the reason that
+the eﬀects of superconductivity normally manifest themsel ves at the Fermi surface is that
+the interaction between the hole and electron bands is large st there.
+The ﬁnal term in Fig. 11(a) is interesting because it describ es the interference of the
+mean ﬁeld and interlayer coupling. In (c) we have iterated th is once, using Fig. 11(b), to
+show the lowest order contribution to the mixing. The diagra m in (c) describes an electron of
+energy ξ1which interacts with the mean ﬁeld to become a hole of energy −ξ1and then hops
+to the second sublattice before reversing the process. The e ﬀect of this diagram is simply to
+couple electron states in the ﬁrst sublattice with hole stat es in the second sublattice. Exactly
+as before then, we should expect avoided crossings in our qua siparticle energy dispersions
+whenever ξ1=−ξ2. As we discussed in section IIIB, this avoided crossing is re sponsible for
+the gap–like structures which appear away from the Fermi sur face in Figs. 4, 5 and 6.
+In section IIIC we discussed the case of coincident sublatti ce Fermi surfaces. In this case,
+21
+Fig. 11(a) still describes the system, but all three process es will contribute to the avoided
+band crossings at the same time. In particular, the ﬁnal proc ess in (a) will be responsible
+for the complicated nature of the gap at the Fermi surface.
+IV. CONCLUSION
+In this paper we have presented results on the density of stat es of a layered S/N sys-
+tem. The inherently superconducting sublattice was presum ed to have a gap with d–wave
+structure. We investigated how the (coherent) coupling bet ween the two types of layers
+changed the DOS from the usual 2–dimensional case. Our chose n Hamiltonian, Eqn. (2),
+led to a relatively complicated quasiparticle energy dispe rsion (Eqn. (7) or (8)), which we
+examined in an attempt to understand our numerical results f or the DOS. We found that
+the behaviour of our model could be summarised by two limitin g cases, distinguished by the
+relative positions of the sublattice Fermi surfaces.
+In the ﬁrst case, the Fermi surfaces of the S and N sublattices were far enough apart in the
+Brillouin zone that the interlayer coupling did not cause th em to interfere with each other.
+In this limit it was clear that the eﬀect of the interlayer cou pling was to shift the usual 2–
+dimensional d–wave gap in the S sublattice perturbatively ( Eqn. (34)) and to induce a small
+gap at the Fermi surface of the N sublattice (Eqn. (35)). The g aps in each of the sublattices
+were also weakly reﬂected in the DOS of the other sublattice, with a magnitude proportional
+tot2
+0. In the appendix, we derived an approximate expression for t he density of states within
+the induced gap (Eqn. A17a), and we found that the behaviour i s much diﬀerent from the
+linear behaviour found in the unperturbed d–wave case. The m ost interesting features,
+though, of the DOS in this case were the gap–like structures w hich appeared away from the
+Fermi surface in the superconducting state (this was clearl y visible in Fig. 4 and we gave
+an expression for the gap widths in Eqn. (29)). In section III D, we discussed this matter
+in some detail. Essentially, the point was that there is an in terference of the interplane
+coupling and the mean ﬁeld. Since the mean ﬁeld can be viewed a s an interaction between
+22
+holes and electrons within the superconducting sublattice , and the interplane coupling is
+an interaction between electrons in the two sublattices, th e interference of the terms results
+in an interaction of holes and electrons in diﬀerent sublatt ices. It is this interaction which
+resulted in the gap–like structures.
+In the second case we considered, the sublattice bands ( ξ1andξ2) crossed at their Fermi
+surfaces. In this case, there was a nontrivial mixing of mean ﬁeld and superconductivity
+eﬀects at the Fermi surface. In Fig. 9, we showed that, for wea k interlayer coupling, the
+system has a nested gap structure, where the outer gap is asso ciated with the usual d–wave
+gap, and the innner gap is a complicated function of the coupl ing and order parameter (Eqn.
+(41)). As the coupling was increased, however (Fig. 10), the outer gap became unrecognizable
+and the total DOS became very similar to that for a single laye r system in which there is
+only one gap.
+Perhaps the most important generalization which follows fr om this paper, then, is that
+the interference of the interlayer coupling and the superco nducting mean ﬁeld can produce
+surprising behaviour. One implication of this is that for a s ystem like YBa 2Cu3O7, where
+gap–like features have been observed in tunneling and Raman scattering experiments, it
+could be very wrong to simply associate these features direc tly with the order parameter.
+ACKNOWLEDGEMENTS
+This work was supported in part by the Natural Sciences and En gineering Council of
+Canada (NSERC) and the Canadian Institute for Advanced Rese arch (CIAR). W.A.A. was
+supported by an Ontario Graduate Scholarship (OGS).
+APPENDIX: LOW ENERGY DOS
+In this section we will derive the low energy approximation f or the density of states in
+the case in which |σ1µ2−σ2µ1|/(σ1+σ2)≫∆k, ω. One immediate consequence of this
+condition is that we can ignore terms in the DOS (equation (14 )) containing δ(w±E+) since
+23
+E2
++≥max(ξ2
+1, ξ2
+2)≥[σ1µ2−σ2µ1
+σ1+σ2]2
+. (A1)
+This leaves us to consider the contributions to the DOS made b yE−. Eqn. (31) is our ﬁrst
+approximation to E−at low energies and we recall that it is zero whenever ξ1=ξ(i)
+1, ξ2=ξ(i)
+2,
+and ∆ k= 0 with i= 1,2 and ξ(i)
+jgiven by Eqn. (32). We will proceed by considering the
+contributions from the neighbourhoods of the two zeros of E−separately, and we break the
+integral in Eqn. (14) into a sum of two integrals which are cen tred about each of these zeros.
+We deﬁne the coordinates
+η(i)=ξ1−ξ(i)
+1 (A2)
+and expand E−to lowest order in η(i)and ∆ k:
+E2
+−∼a(i)2η(i)2+b(i)2∆2
+k (A3)
+with
+a(i)=σ1ξ(i)
+2+σ2ξ(i)
+1
+σ1[ξ(i)
+1+ξ(i)
+2]
+b(i)=ξ(i)2
+2
+t2+ξ(i)2
+2.
+The Jacobian for the transformation ( kx, ky)→(η(i),∆) (where ∆ ≡∆k) is
+J=1
+4σ1∆0sin(kx) sin(ky)
+=∆0
+σ1√
+[α2
++−∆2][α2
+−−∆2](A4)
+with
+α±= 2∆ 0
+1±|η(i)+µ1+ξ(i)
+1|
+4σ1
+.
+This transformation maps the square 0 < kk, ky≤πinto a diamond shaped region whose
+boundaries are given by the lines ∆ = ±α−,−4σ1−µ1−ξ(i)
+1≤η(i)≤4σ1−µ1−ξ(i)
+1. Then
+∫π
+0dkx∫π
+0dky→∫4σ1−µ1−ξ(i)
+1
+−4σ1−µ1−ξ(i)
+1dη(i)∫α−
+−α−d∆J(η(i),∆). (A5)
+24
+Since we are interested in small ω, we make the further approximation that
+α±∼2∆0
+1±|µ1+ξ(i)
+1|
+4σ1
+. (A6)
+We can now interchange the order of integration in (A5) so tha t for small positive ω,
+ρj(ω) =16
+Nπ∑
+kx,ky=0π/d∑
+kz=0U2
+(2j−1)2δ(w−E−)
+∼2∆0d
+σ1π32∑
+i=1∫π/d
+0dkz∫α−
+−α−d∆∫4σ1−µ1
+−4σ1−µ1dη(i)U2
+(2j−1)2δ(w−E−)
+√
+[α2+−∆2][α2−−∆2].
+(A7)
+Finally, in the limit of small ω,
+U2
+12∼1
+2ξ(i)2
+2
+t2+ξ(i)2
+2[
+1−a(i)η(i)
+ω]
+(A8a)
+U2
+32∼1
+2t2
+t2+ξ(i)2
+2[
+1 +a(i)η(i)
+ω]
+. (A8b)
+The term a(i)η(i)/ωis not small but it is odd in η(i)and will vanish in the integration.
+We perform the integral over η(i)in (A7) to get
+ρj(ω) =2d∆0ω
+σ1π32∑
+i=1∫π/d
+0dkzU2
+j
+|a(i)b(i)|∫∆max
+−∆maxd∆√
+[α2+−∆2][α2−−∆2][(ω
+b(i))2−∆2]
+where ∆ max= min( α−, ω/b(i)) and
+U2
+1=ξ(i)2
+2
+t2+ξ(i)2
+2(A9a)
+U2
+2=t2
+t2+ξ(i)2
+2. (A9b)
+If ∆max=ω/b(i)then the energy surface E−=ωis completely contained within the Brillouin
+zone. The integral over ∆ can also be done analytically to giv e
+ρj(ω) =4d∆0ω
+σ1π32∑
+i=1∫π/d
+0dkzU2
+j
+|a(i)|1√λ+K[λ+−λ−
+λ+]
+. (A10)
+The function, K(x), is the complete elliptic integral24. Ifω < α +b(i)then
+λ±=α2
++[(α−b(i))2+ω2]−2(ωα−)2
+±2ωα−√
+[(α+b(i))2−ω2][α2
++−α2
+−] (A11a)
+25
+while if ω > α +b(i)then
+λ±=ω2[α2
+−+α2
++]−2(α+α−b(i))2
+±2(α+α−)√
+[ω2−(α+b(i))2][ω2−(α−b(i))2].
+(A11b)
+There is nothing special about ω=α+b(i)and the integrand in (A10) is featureless at
+these points. On the other hand, λ−vanishes at ω=α−b(i)andK[(λ+−λ−)/λ+] diverges
+logarithmically. The integration over kzreduces the divergence to a peaked structure. The
+magnitude of these peaks in each of the densities of states is is dictated by U2
+j.
+The complexity of (A10) prevents us from performing the ﬁnal integral analytically
+without further assumptions. So far we have used the fact tha t ∆0andωare small and we
+now add to this the assumption that t0is small. For one value of i,
+(−1)isgn(µ2σ1−µ1σ2) = 1, (A12)
+andξ(i)
+1∼(µ2σ1−µ1σ2)/σ2,ξ(i)
+2∼σ2t2/(µ2σ1−µ1σ2),a(i)∼σ2/σ1,b(i)=U2
+1∼
+(σ2t)2/(µ2σ1−µ1σ2)2,U2
+2∼1, and α±∼2∆0[1± |µ2|/4σ2]. For the remaining value
+ofi,
+(−1)isgn(µ2σ1−µ1σ2) =−1, (A13)
+andξ(i)
+1∼ −σ1t2/(µ2σ1−µ1σ2),ξ(i)
+2∼ −(µ2σ1−µ1σ2)/σ1,a(i)∼b(i)=U2
+1∼1,U2
+2∼
+(σ1t)2/(µ2σ1−µ1σ2)2, and α±∼2∆0[1± |µ1|/4σ1]. Substituting this into (A10) gives
+ρ1∼4∆0ω
+σ1π21√λ+K[λ+−λ−
+λ+]
++4d∆0ω
+π3σ2
+[µ2σ1−µ1σ2]2∫π/d
+0dkzt(kz)2
+√λ+K[λ+−λ−
+λ+]
+.
+(A14)
+The ﬁrst term is for igiven by (A13) and has λ±given by (A11a) since b(i)∼1. The second
+term is for igiven by (A12) and, since b(i)is a function of kz,λ±will be given by (A11a)
+26
+when t(kz)> t∗and by (A11b) when t(kz)< t∗. The value of t∗comes directly from the
+condition ω=α+b(i):
+t∗(ω) =√
+2ω
+∆0σ2[4σ2+|µ2|]|µ2σ1−µ1σ2|. (A15)
+In order to solve the ﬁnal integral in (A14), we make the crude approximation that λ±can
+be replaced by the limiting forms λ±(t≪t∗) =ω2[α+±α−]2when t < t∗, andλ±(t≫t∗) =
+α+α−b(i)when t > t∗. Essentially, the point of this approximation is that in reg ions of the
+Brillouin zone where the induced gap is smaller than ω, the second sublattice is treated as
+normal, while in the remaining regions, ωis treated as much smaller than the induced gap.
+We ﬁnd that ρ1(ω)∼ρ′
+1(ω) +ρ′′
+1(ω) with
+ρ′
+1(ω) =4∆0ω
+σ1dπ21√λ+K[λ+−λ−
+λ+]
+(A16a)
+and
+ρ′′
+1(ω) =σ2t2
+0
+π3[µ2σ1−µ1σ2]2K[
+1−µ2
+2
+16σ2
+2]
+×[π
+2−cos−1(t∗
+t0)−t∗
+t0√
+1−(t∗
+t0)2]
++4σ2t∗2
+π2[µ2σ1−µ1σ2]2[
+1−|µ2|
+4σ2]−1
+cos−1(t∗
+t0) (A16b)
+when t∗(ω)< t0, and
+ρ′′
+1=σ2t2
+0
+2π2[µ2σ1−µ1σ2]2K[
+1−µ2
+2
+16σ2
+2]
+(A16c)
+when t∗(ω)< t0. Equation (A16a) is just the DOS which would result in the dec oupled
+(t0= 0) limit. Equation (A16b) shows that the interlayer coupli ng induces an inner gap for
+t∗(ω)< t0(which is the prediction made in Eqn. (35)). The width of this gap is proportional
+tot2
+0and is diﬃcult to see for weak interlattice coupling.
+We can ﬁnd the DOS in the second sublattice, ρ2, in an analogous manner:
+ρ2(ω)∼2
+σ2π3K[
+1−µ2
+2
+16σ2
+2][π
+2−cos−1(t∗
+t0)]
+27
++4t∗2
+σ2π2t2
+0[
+1−|µ2|
+4σ2]−1√
+(t0
+t∗)2−1
++ωt2
+0σ1
+4π∆0[µ2σ1−µ1σ2]−2[
+1−µ2
+1
+16σ2
+1]−1
+(A17a)
+when t∗< t0and
+ρ2(ω)∼1
+σ2π2K[
+1−µ2
+2
+16σ2
+2]
++ωt2
+0σ1
+4π∆0[µ2σ1−µ1σ2]−2[
+1−µ2
+1
+16σ2
+1]−1
+(A17b)
+whent∗> t0. Again we see that there is an induced gap for t∗(ω)< t0, due to the interactions
+of the sublattices. For t∗(ω)> t0,ρ2(ω) is just the normal state DOS at the Fermi surface
+with corrections of order t2
+0due to the adjacent layers. In Fig. 7 we graph the low energy
+DOS calculated from equations (14), (A10) and from our analy tical approximations. We see
+that, although our analytic expressions for ρ1andρ2tend to overestimate the size of the
+inner gap, they contain the essential description of the DOS .
+28
+REFERENCES
+1D. S. Dessau et al., Phys. Rev. Lett. 66 , 2160 (1991).
+2Y. Kitaoka, et al, J. Phys. Chem. Solids 54 , 1385 (1993); C. P. Slichter, et al, J. Phys.
+Chem. Solids 54 , 1439 (1993); W. N. Hardy, et al, Phys. Rev. Lett. 70 , 3999 (1993).
+3D. A. Wollman et al., Phys. Rev. Lett. 71 , 2134 (1993)
+4G. Kotliar, Phys. Rev. B 37 , 3664 (1988)
+5P. A. Lee, N. Nagaosa, Phys. Rev. B 46 , 5621 (1992)
+6P. Monthoux, D. Pines, Phys. Rev. B 47 , 6069 (1993); D. Pines, Physica C 185–189 , 120
+(1991)
+7J. F. Annett, N. Goldenfeld,Jour. Low Temp. Phys. 89 , 197 (1992)
+8S. Lenck, J. P. Carbotte, R. C. Dynes, Phys. Rev. B 49 , 6933 (1994)
+9C. Zhou, H. J. Schulz, Phys. Rev. B 45 , 7397 (1992).
+10A. J. Fedro, D. D. Koelling, Phys. Rev. B 47 , 14342 (1993).
+11J. P. Carbotte, C. Jiang, Phys. Rev. B 48 , 4231 (1993)
+12N. Bulut, D. J. Scalapino, Phys. Rev. B 45 , 2371 (1992)
+13P. Arberg, M. Mansor, J. P. Carbotte, Solid State Comm. 86 , 671 (1993)
+14H. Kim, G. Preosti, P. Muzikar, Phys. Rev. B 49 , 3544 (1994)
+15A. A. Abrikosov, Physica C 182 , 191 (1991); A. A. Abrikosov, R.A. Klemm, Physica C
+191, 224 (1992).
+16A.I. Buzdin, V.P. Damjanovic´, A.Y. Simonov, Phys. Rev. B 45 , 7499 (1992); A.I. Buzdin,
+V.P. Damjanovic´, A.Y. Simonov, Physica C 194 , 109 (1992).
+17L. N. Bulaevskii, M. V. Zyskin, Phys. Rev. B 42 , 10230 (1990).
+29
+18M. Tachiki, S. Takahashi, F. Steglich and H. Adrian, Z. Phys. B80, 161 (1990); S.
+Takahashi and M. Tachiki, Physica C 170, 505 (1990); M. Tachiki, T. Koyama and S.
+Takahashi, Prog. Theor. Phys. Suppl. 108, 297 (1992).
+19R. S. Markiewicz, J. Phys. Chem. Solids 54 , 1153 (1993).
+20V. Z. Kresin, Phys. Rev. B 25 , 157 (1982); V. Z. Kresin, S. A. Wolf, Phys. Rev. B 46 , 6458
+(1992); V. Z. Kresin, H. Morawitz, S. A. Wolf, Mechanisms of Conventional and High Tc
+superconductivity , Oxford University Press (1993).
+21A. Bussmann–Holder, L. Genzel, A. Simon, A. R. Bishop, Z. Phy s. B 92 , 149 (1993).
+22X. K. Chen et al., Phys. Rev. B 48 , 10530 (1993); M. Cardona, J. Phys. Chem. Solids 54 ,
+1287 (1993); E. Polturak, G. Koren, D. Cohen, E. Aharoni, Phy s. Rev. B 47 , 5270 (1993).
+23R. J. Jelitto, J. Phys. Chem. Solids 30 , 609 (1969).
+24M. Abramowitz, I. A. Stegun, Handbook of Mathematical Functions , Dover Publications,
+Inc. (1972)
+30
+FIGURES
+FIG. 1. Tcand ∆ 0(T= 0)/Tcvst0. The model parameters are σ1= 1,σ2= 0.6,µ1=−0.8,
+µ2= 0.4
+FIG. 2. Quasiparticle energy dispersion along the line kx=ky,kz= 0. We have chosen an
+s–wave gap for purposes of illustration since a d–wave gap va nishes along this line. The features
+which are important for our discussion of the density of stat es are the two minima of E−, which
+are related to the intrinsic and induced gaps, and the two avo ided band crossings. The parameters
+areσ1= 1,σ2= 0.6,µ1=µ2=−0.8,t0= 0.2, ∆ 0= 0.1
+FIG. 3. Density of states in the normal and superconducting s ublattices for the uncoupled limit.
+There are logarithmic divergences at ω∼ −µ1,−µ2due to the intrinsic van Hove singularities of
+ξ1andξ2. There is also a d–wave gap at the Fermi surface in the ﬁrst sub lattice. The choices of
+parameters are σ1= 1,σ2= 0.6,µ1=µ2= 0.8,t0= 0.01,∆0= 0.1,Tc= 0.086
+FIG. 4. Density of states in the normal and superconducting s ublattices. Here the bands ξ1
+andξ2cross away from their van Hove singularities. In addition to the intrinsic singularities at
+ω∼ −µ1,−µ2and the d–wave gap in ρ1there are two gap–like structures at ω∼ ±0.55. There
+is also an induced gap at the Fermi surface in ρ2which is too small to show on this plot. The
+parameters are σ1= 1,σ2= 0.6,µ1=−0.8,µ2= 0.4,t0= 0.1, ∆ 0= 0.09,Tc= 0.086
+FIG. 5. Density of states in the normal and superconducting s ublattices. This ﬁgure shows the
+eﬀect of increasing the interlayer coupling on Fig. 4. The sm earing of the logarithmic singularities
+by the third dimension is clearly evident. The induced gap at the Fermi surface is now visible
+(although the fact that ρ2(0) = 0 is not clear in the plot), and the gap–like structures a way from
+the Fermi surface are much larger, and shifted slightly, as w e would expect from Eqn. (28). Here
+we have σ1= 1,σ2= 0.6,µ1=−0.8,µ2= 0.4,t0= 0.4, ∆ 0= 0.15,Tc= 0.086
+31
+FIG. 6. Density of states in the normal and superconducting s ublattices. In this case, the van
+Hove singularities intrinsic to the sublattice dispersion s atω∼0.8 are strongly suppressed by
+an avoided band crossing. This should be compared with Fig. 5 , where the interlayer coupling is
+the same, but the intrinsic van Hove singularities of ξ1andξ2can still be identiﬁed. The other
+interesting feature of this ﬁgure is that we can see clearly t hat the induced gap is reﬂected in ρ1. We
+should also note again that ρ2actually vanishes at ω= 0. Here σ1= 1,σ2= 0.6,µ1=µ2=−0.8,
+t0= 0.4, ∆ 0= 0.15,Tc= 0.086.
+FIG. 7. Low frequency densities of states: (a) Determined nu merically from the exact ex-
+pression, Eqn. (14) (b) Determined numerically from the app roximate expression, Eqn. (A10) (c)
+Determined from the approximate analytical expressions (A 16) and (A17). The model parameters
+areσ1= 1,σ2= 0.6,µ1=µ2=−0.8,t0= 0.2, ∆ 0= 0.15.
+FIG. 8. Quasiparticle energy dispersion along the lines (a) kx=ky,kz= 0 and (b) kx=ky,
+kz=πfor an s–wave gap. In this case, the Fermi surfaces of ξ1andξ2coincide. Whether or not
+E−, has a single minimum or double minimum structure depends on the value of t(k) (see eqn.
+(39)). The parameters are σ1= 1,σ2= 0.6,µ1=−0.8,µ2=−0.48,t0= 0.2, ∆ 0= 0.1.
+FIG. 9. Density of states. The Fermi surfaces of ξ1andξ2are coincident. In addition to the
+intrinsic singularities at ω∼ −µ1,−µ2, there is a nested gap structure at the Fermi surface. The
+outer gap is related to the usual d–wave gap in a 2–dimensiona l superconductor while the inner
+gap comes from a mixture of band structure and superconducti vity eﬀects. The parameters are
+σ1= 1,σ2= 0.6,µ1=−0.8,µ2=−0.48,t0= 0.1, ∆ 0= 0.09,Tc= 0.086.
+FIG. 10. Density of states. Again the Fermi surfaces of ξ1andξ2are coincident. The increased
+interlayer coupling has changed the appearance of the DOS co nsiderably from Fig. 9. The outer
+gap no longer exists and the gap which remains has a complicat ed dependency on both t0and ∆ 0.
+This DOS would not be simple to distinguish from that of a 2–di mensional d–wave superconductor
+in a tunneling experiment, even though the physics of the two systems is diﬀerent. The parameters
+areσ1= 1,σ2= 0.6,µ1=−0.8,µ2=−0.48,t0= 0.4, ∆ 0= 0.15,Tc= 0.086.
+32
+FIG. 11. Feynman diagram representation of the equations fo rG11: (a) and (b) are diagram-
+matic forms of Eqns. (50a) and (50b) respectively. These equ ations form a self consistent set. In
+(c), the ﬁnal term in (a) is iterated once, using (b), to give t he lowest order eﬀect of the mixing of
+interlayer coupling and the mean–ﬁeld. Thick lines represe nt full Green’s functions, thin lines rep-
+resent uncoupled Green’s functions, rightward pointing ar rows represent spin up electrons, leftward
+pointing arrows represent spin down holes and vertical dash ed lines represent interlayer hopping.
+33
+
+
+
+
+
+
+
+
+
+
+2
+1
+2
+1
+2
+1
+2
+1(a)
+(b)
+(c)=
+=+
+++
+t* ∆*∆*∆*
+t*t*t*
+tt t
+∆∆ ∆t
++

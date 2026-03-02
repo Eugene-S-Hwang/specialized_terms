@@ -1,0 +1,2350 @@
+RedSage: A Cybersecurity Generalist LLM
+NaufalSuryanto1,MuzammalNaseer1,∗,PengfeiLi1,SyedTalalWasim2,
+JinhuiYi2,JuergenGall2,PaoloCeravolo3,ErnestoDamiani3
+1KhalifaUniversity,2UniversityofBonn,3UniversityofMilan
+∗Projectlead
+Cybersecurity operations demand assistant LLMs that support diverse workflows with-
+out exposing sensitive data. Existing solutions either rely on proprietary APIs with
+privacy risks or on open models lacking domain adaptation. To bridge this gap, we
+curate 11.8B tokens of cybersecurity-focused continual pretraining data via large-scale
+web filtering and manual collection of high-quality resources, spanning 28.6K docu-
+ments across frameworks, offensive techniques, and security tools. Building on this,
+wedesignanagenticaugmentationpipelinethatsimulatesexpertworkflowstogenerate
+266Kmulti-turncybersecuritysamplesforsupervisedfine-tuning. Combinedwithgen-
+eral open-source LLM data, these resources enable the training of RedSage, an open-
+source, locally deployable cybersecurity assistant with domain-aware pretraining and
+post-training. Torigorouslyevaluatethemodels,weintroduceRedSage-Bench,abench-
+mark with 30K multiple-choice and 240 open-ended Q&A items covering cybersecu-
+rity knowledge, skills, and tool expertise. RedSage is further evaluated on established
+cybersecurity benchmarks (e.g., CTI-Bench, CyberMetric, SECURE) and general LLM
+benchmarks to assess broader generalization. At the 8B scale, RedSage achieves con-
+sistently better results, surpassing the baseline models by up to +5.59 points on cyber-
+securitybenchmarksand+5.05pointsonOpenLLMLeaderboardtasks. Thesefindings
+demonstratethatdomain-awareagenticaugmentationandpre/post-trainingcannotonly
+enhancecybersecurity-specificexpertisebutalsohelptoimprovegeneralreasoningand
+instruction-following. Allmodels,datasets,andcodearepubliclyavailable.
+ProjectPage:https://risys-lab.github.io/RedSage/
+1 INTRODUCTION
+Therapidevolutionofcybersecuritythreatshaselevatedtheneedforproactiveandcomprehensive
+defensestrategies,asorganizationsfaceincreasinglysophisticatedattacksandadvancedpersistent
+threats(CheMatetal.,2024). Moderncybersecurityinvolvesawiderangeofcriticaltasks,includ-
+Figure1: OverviewoftheRedSagepipeline. RedSageistrainedthroughcontinualpre-trainingon
+cybersecurity-filteredcorporaandpost-trainingwithcuratedandaugmentedconversationdata,fol-
+lowedbyevaluationonacomprehensivebenchmarkcoveringknowledge,skills,andtoolexpertise.
+1
+6202
+naJ
+92
+]RC.sc[
+1v95122.1062:viXraTable 1: Comparison of cybersecurity LLM benchmarks.
+Columns indicate knowledge (Know.), skills (Skill), tool profi-
+ciency (Tool), and use of quality scoring (Qual.). Size = total
+samples. AgenticCTFbenchmarks(e.g., NYU-CTF,CyBench)
+areexcludedastheyareinteractiveratherthanbaseLLMeval.
+Name Know. Skill Tool Qual. Size
+SecEval ✓ ✗ ✗ ✗ 2,000
+CyberMetric ✓ ✗ ✗ ✗ 10,000
+CyberBench ✓ ✗ ✗ ✗ 80,422
+SECURE ✓ ✗ ✗ ✗ 4,072
+CS-Eval ✓ ✗ ✗ ✗ 4,369
+SecBench ✓ ✗ ✗ ✗ 47,910 Figure 2: Taxonomy of Red-
+CTI-Bench ✓ ✓ ✗ ✗ 5,610 Sage Seed&Bench dataset. It
+CyberSecEval ✗ ✓ ✗ ✗ 1,000 spans knowledge, practical of-
+RedSage-Bench(Ours) ✓ ✓ ✓ ✓ 30,240 fensiveskills,andtoolexpertise
+(CLIandKaliLinux).
+ingthreatanalysis,incidentresponse,vulnerabilitymanagement,andsecuritymonitoring.However,
+thecomplexityofsecuritytoolsandthelevelofexpertiserequiredtooperatethempresentsignificant
+challenges. Thesechallengesarecompoundedbyaglobalskillsshortage,withresearchestimating
+ademand–supplygapofmillionsofunfilledcybersecuritypositions((ISC)²,2024). Consequently,
+thereisgrowingmomentumtoemploycybersecurity-tunedLLMstoaugmenthumananalysts.
+Recent efforts have produced cybersecurity-trained LLMs, yet most emphasize a single training
+stagewhileoverlookingothers. Forinstance, someextendpretrainingondomain-specificcorpora
+(Kassianik et al., 2025) but apply limited post-training with only 835 samples (Yu et al., 2025) or
+fewer than 30K cybersecurity-filtered items (Weerawardhena et al., 2025), while others focus on
+supervisedfine-tuningwithlargecybersecurityQ&Acollectionswithoutpretrainingtostrengthen
+domainknowledge(DeepHat,2025). Further,existingcybersecuritybenchmarksofferonlypartial
+coverage,suchasomittingtoolproficiencyandqualitativeevaluationoffree-responseQ&Abeyond
+simpleMCQs(seeTable1andFig.2). Beyondthesegaps,mostworksalsodonotreleasetheirdata
+orpipelines,limitingreproducibilityandopenness(seeTable2).
+To address these gaps, we present RedSage (Retrieval-Enhanced Data-driven Security Assistant
+GuidanceandEvaluation),anopen-sourceLLMtailoredforcybersecurity. AsillustratedinFig.1,
+RedSageintegrateslarge-scalecontinualpretrainingoncybersecurity-filteredcorpora,post-training
+withcuratedandagenticallyaugmenteddatasets,andrigorousevaluationacrossknowledge,skills,
+and tool proficiency. Our key contributions are: (1) assembling an 11.8B-token corpus of cyber-
+securitydatafordomain-specificcontinualpretraining,(2)constructinga266K-sampleaugmented
+dataset via an agentic pipeline for supervised fine-tuning, followed by preference alignment with
+open-sourcedata,(3)introducingRedSage-Bench,abenchmarkwith30KMCQsforbroadcover-
+ageand240open-endedQ&Aitemsforqualityevaluationacrossknowledge,skills,andtools,and
+(4)RedSage,anopen8Bmodelwithdataandcode,achievingstate-of-the-artresultsonestablished
+cybersecuritybenchmarkswhilealsoimprovingongeneralbenchmarks.
+2 RELATED WORKS
+2.1 CYBERSECURITYBENCHMARKS
+GeneralKnowledge. SeveralbenchmarksassessLLMs’understandingofcorecybersecuritycon-
+cepts via structured Q&A. SecEval (Li et al., 2023) includes 2K+ MCQs across nine domains
+(web, system, application security). CyberMetric (Tihanyi et al., 2024) provides 10K MCQs gen-
+eratedwithRAGandexpertvalidation, spanningpenetrationtestingandnetworksecurity. Cyber-
+Bench (Liu et al., 2024) extends beyond MCQs to tasks such as NER, summarization, and clas-
+sification. SECURE (Bhusal et al., 2024) targets Industrial Control Systems with domain-specific
+MCQs on risk reasoning and vulnerability analysis. CS-Eval (Yu et al., 2024) covers 42 subcate-
+goriesacrossthreecognitivelevels(Knowledge, Ability, Application)usingMCQs, multi-answer,
+2Table2: Comparisonofcybersecurity-tunedLLMtrainingdatasets. Pretrainingandcuratedcolumnsreport
+token counts (B = billion, M = million). SFT reports the number of supervision samples. ✓= present; ✗=
+absent;N/R=notreported.
+Pretrain Curated SFT Agentic Open Open
+Name
+Tokens(B) Tokens(M) Samples Augmented Data Model
+PRIMUS 2.57 191 835 ✗ ✓ ✓
+Foundation-Sec-8B 5.10 ✗ 28K ✗ ✗ ✓
+DeepHat ✗ ✗ >1M ✗ ✗ ✓
+Lily-Cybersecurity-7B ✗ ✗ 22K ✗ ✗ ✓
+Cyber-DAP ✗ 119 ✗ ✗ ✗ ✗
+SecGemini(closed) N/R N/R N/R ✗ ✗ ✗
+Ours(RedSage) 11.7 850 266K ✓ ✓ ✓
+Datasetstatisticsarecompiledfromofficialpublications,technicalreports,andmodelcards.
+T/F, and open-ended items. SecBench (Jing et al., 2025) offers 44,823 MCQs and 3,087 SAQs in
+ChineseandEnglish,capturingbothfactualrecallandlogicalreasoning.
+Applications and Agentic Tasks. Application-oriented benchmarks probe reasoning beyond re-
+call. CTIBench (Alam et al., 2024) defines four tasks: MCQs, common vulnerabilities and
+exposures(CVE)-to-common weakness enumeration(CWE) mapping, common vulnerability scor-
+ing system (CVSS) prediction, and threat actor attribution in cyber threat intelligence. CyberSe-
+cEval(Wanetal.,2024)examinesmodelrisksacrosseightareas(e.g., exploitgeneration, prompt
+injection). Agentic evaluations such as NYU-CTF (Shao et al., 2024) and CyBench (Zhang et al.,
+2025)assessred-teamcapabilitiesthroughcapturetheflag(CTF)challenges(e,gwebexploitation,
+reverseengineering)ininteractivesettings.
+While these efforts advance evaluation of knowledge and applications, they rarely isolate compe-
+tenceinunderstandingandoperatingsecuritytoolsorsystematicallyassessthequalityoffree-form
+responses. As summarized in Table 1, most benchmarks specialize in either knowledge or appli-
+cations, and even agentic ones lack explicit tool-focused assessment. We address these gaps with
+RedSage-Bench,whichjointlymeasuresknowledge,skills,andtoolproficiency(Fig.2).
+2.2 CYBERSECURITYDATASETSANDMODELS
+Early Cybersecurity Datasets. Early domain-specific models such as CyBERT (Ranade et al.,
+2021),SecureBERT (Aghaeietal.,2023),andCTI-BERT (Park&You,2023)showedthevalueof
+domain-adaptivefine-tuning.However,theirdatasetswerenotreleased.Moreover,asencoder-based
+models,theyrequiretask-specificfine-tuning,restrictingscalability.
+Cybersecurity Datasets for LLMs. With the advent of LLMs, several groups curated
+cybersecurity-specificcorpora. PRIMUS(Yuetal.,2025)(TrendMicro)provides2.75Btokensfor
+continued pretraining, 835 samples for supervised fine-tuning, and reasoning distillation, extend-
+ing Llama-3.1-8B-Instruct into Llama-Primus-Base and -Merged. Foundation-Sec-8B (Kassianik
+etal.,2025)(Cisco)collects5.1Btokensvialarge-scalescrapingandfiltering,continuingpretrain-
+ing on Llama-3.1-8B-Base and adding a cybersecurity post-training stage, though its dataset re-
+mainsclosed. CommunityeffortsincludeDeepHat(formerlyWhiteRabbitNeo),reportedlytrained
+on1M+Q&Apairsforrealworkflows(DeepHat,2025),andLily-Cybersecurity,whichfine-tunes
+Mistral-7B on 22K hand-crafted and lightly refined conversations (Sego Lily Labs, 2024). Cyber-
+DAP(Salahuddinetal.,2025)highlightstheeffectivenessofsmallercuratedcorporaforcontinued
+pretraining, while SecGemini (Google Security Blog, 2025) offers a closed model with live threat
+intelligencebutunreleaseddata. WesummarizethesedatasetsinTable2.
+Unlikepriorworkwithlimitedaugmentation,weintroduceagenticaugmentationtotransformcu-
+rated cybersecurity resources into diverse, realistic multi-turn dialogs simulating expert–assistant
+workflows across knowledge, offensive operations, and tool proficiency for domain-specific fine-
+tuning. RedSageis,toourknowledge,theonlyeffortcombininglarge-scalecontinualpretraining,
+curateddata,agenticallyaugmentedSFT,andfullopenness(data,model,andcode)(Table2).
+3Figure 3: RedSagedatapipelinecombininglarge-scaletextcollection,curatedcybersecurityresources,and
+agenticaugmentationforsupervisedfine-tuningandbenchmarkgeneration.BestviewedinZoom.
+3 REDSAGE
+WebuildRedSagethroughadata-centricpipelinecomprising(1)large-scalefilteringofcybersecu-
+rity textand curationof high-qualityresources for continualpretraining, (2)agentic augmentation
+tocreatesupervisedfine-tuningdata,and(3)benchmarkconstructionforevaluation(Fig.3).
+3.1 REDSAGEPRE-TRAININGDATA
+CyberFineWeb.WeconstructCyberFineWebbyfilteringFineWeb(Penedoetal.,2024a),acleaned
+large-scalewebcorpusaggregatedfromCommonCrawl(2013–2024;∼15Ttokens). Toextractcy-
+bersecuritycontent,wefine-tuneabinaryclassificationmodelbasedonModernBERT-base(Warner
+etal.,2025),astate-of-the-artencodertrainedon2T+tokens. Applyingthisfilteryieldsacyberse-
+curitycandidatepoolof∼125Mdocuments(∼89.8Btokens).
+To avoid catastrophic forgetting on general knowledge, we mix CyberFineWeb with general-
+knowledgesamplesfromFineWeb-Edu(Lozhkovetal.,2024)ata30%replayratio. FineWeb-Edu
+isa1.3T-tokeneducationalsubsetshowntoimprovegeneralLLMbenchmarks. Thisstrategyfol-
+lowspriorworkonreplay-basedcontinuallearning(Ibrahimetal.,2024;Guoetal.,2025),though
+unlike dynamic replay, we embed these examples directly into the static corpus. We then apply
+global near-duplicate removal with MinHash-LSH over the combined data. This yields a dedupli-
+cated mixed corpus of ∼52M documents (∼46.8B tokens), while inheriting FineWeb’s upstream
+extensivefilteringandPIIremoval.
+Finally, we partition the deduplicated corpus into 20 chronological chunks for sequential training
+under compute constraints and apply early stopping after 5 chunks to control training cost. This
+yieldsthefinalCyberFineWebcorpus: ∼13Mdocuments(∼11.7Btokens)usedinourmodel. Im-
+plementationdetails,includingclassifiertraining,deduplicationparameters,anddatasetsstatistics,
+areprovidedinAppendixA.1.
+RedSage-Seed. Web-filtered text offers broad coverage, but its reliability is not assured. To pro-
+videhigh-qualitycontent,wecurateRedSage-Seed:28,637samples(∼0.15Btokens)frompublicly
+availablesourcesorganizedintothreecategories:Knowledge(well-establishedcybersecurityframe-
+works and knowledge bases (MITRE Corporation, 2025a;b;c; The OWASP Foundation, 2025)),
+Skills (penetration-testing write-ups (0xdf, 2025), hacking techniques (HackTricks, 2025), pay-
+loadexamples(swisskyrepo,2025),andethicalhackingtutorials/blogs(NullByte,2025;Chandel,
+2025)), and Tools (CLI cheat-sheets (tldr pages, 2025), Linux manuals (linux.die.net, 2025), Kali
+tools (Kali, 2025)). We additionally collect an uncategorized dump of ∼459K documents (∼0.7B
+tokens)fromtrustedcybersecuritysources(AppendixA.2)tosupplyextrapretrainingtokens.
+To process these resources, we crawl web-based sources and convert them to Markdown using
+ReaderLM-v2 (Wang et al., 2025), while downloadable resources are parsed directly. This hier-
+archicalMarkdownformatpreservesstructureandenableseffectivechunkingforsubsequentaug-
+4Figure 4: Agenticdataaugmentationpipeline. Seeddata(e.g.,CAPECattackpatterns)isprocessedbythe
+Planner Agent into skill sets and augmentation plans, which the Augmenter Agent instantiates as grounded,
+role-basedmulti-turncybersecuritydialoguesforsupervisedfine-tuning(SFT).
+mentation stages. Only the categorized seeds are used for augmentation, while both sets support
+pretraining. Fullstatistics,categorization,processingsteps,andexamplesareinAppendixA.2.
+Table 3: Statistics of RedSage-Seed (curated pretraining corpus) vs. RedSage-Conv (augmented
+SFTdata)bycategory. Columnsshowsamplecounts,averagetokens,andtotaltokens.
+Category Seed Conversation
+Samples Avg.Tokens Tokens(M) Samples Avg.Tokens Tokens(M)
+Knowledge–General 6,924 2,370 16.4 67,635 1,326 89.6
+Knowledge–Frameworks 3,715 2,935 10.5 39,908 1,285 51.0
+Skill–Offensive 4,032 9,478 37.8 38,870 1,345 52.3
+Tools–CLI 12,943 5,774 78.9 109,261 1,331 145.7
+Tools–Kali 1,023 6,693 6.3 10,506 1,356 14.3
+Total 28,637 5,231 149.8 266,180 1,326 353.0
+CybersecurityDumps 459,473 1,524 700,1 – – –
+3.2 REDSAGEPOST-TRAININGDATA
+AgenticDataAugmentation. Toenableassistantscapableofrealisticsecuritydialogues,weaug-
+mentRedSage-Seedintomulti-turnconversationsusinganagenticframeworkinspiredbyAgentIn-
+struct(Mitraetal.,2024). Unlikepriorworkwithfixedskilltemplates,ourPlannerAgentanalyzes
+each seed data chunk and derives candidate skill sets (e.g., vulnerability analysis, tool-command
+generation)alongwithaugmentationstrategiesthatdescribehowtheseedistransformed, adapted
+into a conversational or Q&A format, and enriched with explanations. We enforce guidelines on
+relevance, diversity, creativity, detail, andformatting. TheAugmenterAgent theninstantiateseach
+plan into realistic, role-based multi-turn dialogues grounded in the seed data. This pipeline scales
+efficiently,producingmultipledialoguesperskillsetandfilteringoutputsforformatvalidity,consis-
+tency,andtopicalrelevance. Overall,ityieldsRedSage-Convwith∼266Kmulti-turnconversations
+(∼352M tokens), expanding total samples by 9.2× and tokens by 2.3× across knowledge, skills,
+and tools while preserving technical depth (Tab. 3). Fig. 4 illustrates the augmentation pipeline,
+whiledetailedstatistics,prompts,andexamplesareprovidedinAppendixA.3.
+Generalinstructionintegration. Whiledomain-specificconversationsgroundtheassistantincy-
+bersecurity, effective models must also handle broader instruction-following tasks. We therefore
+complement RedSage-Conv with curated post-training SFT data from SmolLM3 (Bakouch et al.,
+52025)1,focusingonitsnon-reasoningsubset. Thiscorpusaddscoverageofsummarization,numer-
+acy, datainterpretation, temporalandunitreasoning, commonsenseknowledge, step-by-stepplan-
+ning, technical writing, scripting, and general tool use. The combination of cybersecurity-specific
+andgeneralinstructiondatayieldsahigh-qualitypost-trainingcorpus,enablingacybersecurityas-
+sistantthatperformsspecializedtaskswhileretainingbroadcapabilities.
+3.3 REDSAGEBENCHMARK
+Multiple-choiceQ&Ageneration. WederiveMCQsfromRedSage-Seedasfollows:foreachseed
+item, a strong open instruction-tuned LLM 2 generates several MCQs under guidelines: items are
+self-containedandclosed-book,targetstabledomainfacts/procedures,followafour-optionformat
+withthreeplausibledistractors,andsatisfydiversityandformattingconstraints.
+Open-ended Q&A generation. We extend RedSage-Seed into open-ended Q&A using an agen-
+ticaugmentationframeworkwithtwostages: (1)anEvaluation-Planer analyzesseedartifactsand
+proposesrealisticevaluationtypeswithinstructiontemplatesandanswerguidelines;(2)aQuestion-
+Answer Generator instantiates each plan into a self-contained open-ended Q&A with a natural-
+languagepromptandareferenceanswer. Allopen-endedQ&Aaregroundedintheseeddataand
+scored with a reference-based LLM-as-judge rubric that evaluates both factual correctness (True/-
+False)andanswerquality(0–10)acrosshelpfulness,relevance,depth,andlevelofdetail.
+Multi-stageverification. ForMCQs,weapplyatwo-stagepipeline: Stage1(structuralvalidity)
+uses a verifier LLM 2 with a checklist on format, correctness, distractors, topical relevance, and
+consistency, filtering items by pass/fail; Stage 2 (quality scoring) then applies the same verifier
+LLM 2 to assign each remaining item a score s ∈ [0,10] for clarity, correctness, and assessment
+value. Inbothstages,weusechain-of-thoughtpromptingsotheverifierexplicitlyreasonsthrough
+eachchecklistcriterionbeforeissuingapass/faillabelorscore,yieldingjudgmentsthatmoreclosely
+follow our rubric. We then select the pairs where s > 8 and apply quota-aware random sampling
+to ensure taxonomic balance, yielding 30,000 MCQ–answer pairs evenly split across knowledge,
+skills,andtools. Foropen-endedQ&A,wedirectlyperformLLM-basedqualityscoringinStage2
+followedbyhumanverification,selecting240high-qualitypairsevenlydistributedacrosscategories.
+Humanqualitycontrol. Acrossallverificationstages,weiterativelyrefinedpromptsandmanu-
+allyinspectedsampledoutputsuntiltheverifierconsistentlyalignedwithourcriteria. Weobserve
+thatchain-of-thoughtpromptingplaysasignificantroleinproducingmoreprecisejudgments. For
+the large-scale MCQ benchmark, random audits confirmed that items passing the final stages met
+bothStage1andStage2requirements. Foropen-endedQ&A,weretainonlyhuman-verifieditems.
+Datadecontamination. Weapplyanadditionalfilteringanddeduplicationsteptopreventunin-
+tendedoverlapbetweenourbenchmarkdatasetsandaugmentedpost-trainingdata,despitetheirbe-
+inggeneratedthroughdifferentpipelinesandoutputformats. Specifically,weremoveanysynthetic
+post-training instance whose query has a semantic similarity above 0.9 to a benchmark question.
+Thiseliminates2.96%ofdatarelativetothebenchmarksize(0.31%ofthefulltrainingcorpus)and
+helpsensurethatevaluationremainsfreeoftrainingleakage.
+Implementation details, intermediate outputs, prompt templates, and qualitative examples are pro-
+videdinAppendixA.4,andthefullevaluationprotocolisdescribedinAppendixC.2.
+3.4 REDSAGETRAINING
+WebuildRedSageusingtheAxolotlframework(Axolotlmaintainersandcontributors,2023),with
+continued pretraining of the open-source base model, Qwen3-8B-Base (Yang et al., 2025), on cy-
+bersecurity corpora, followed by post-training through supervised fine-tuning on augmented con-
+versations and preference alignment. We illustrate training stages in Fig. 5 with further training
+details, including exact hyperparameters, estimated training time, and computational cost analysis
+inAppendixB.
+1GeneralSFTdatasets:HuggingFaceTB/smoltalk2
+2TeacherandVerifierLLM:meta-llama/Llama-3.3-70B-Instruct,Qwen/Qwen2.5-72B-Instruct
+6CFW Base
+CyberFineWeb RedSage-Seed & Dump
+Continued Pretraining Stage (CPT)
+Base Ins DPO
+RedSage-Conv & SmolTalk2 Tulu3 Preference Mixture
+Supervised Fine-tuning (SFT) Direct Preference Optimization (DPO)
+Figure5: RedSagetrainingpipeline. WefirstcontinuepretrainingtheQwen3basemodelonCyberFineWeb
+toobtainRedSage-CFW,followedbyRedSage-SeedandRedSage-DumptoproduceRedSage-Base. Wethen
+performsupervisedfine-tuningusingRedSage-ConvandSmolTalk2(Bakouchetal.,2025)data,andfinalize
+themodelwithDirectPreferenceOptimizationusingtheTulu3PreferenceMixture(Lambertetal.,2025).
+Training setup. For continued pretraining (CPT), we first train on the CyberFineWeb corpus and
+followed by RedSage-Seed (Sec. 3.1). We run a single epoch with distributed optimization on
+32×A100-64GB GPUs (global batch size 1024), using DeepSpeed ZeRO Stage 3, the AdamW
+optimizer,andafixedlearningrateof2.5×10−6withlinearwarmup.
+After pre-training, we further fine-tune our base model on RedSage-Conv and general SFT data
+(Sec. 3.2) with two epochs using a cosine learning rate schedule. We apply direct prefer-
+ence optimization (DPO) (Rafailov et al., 2023) with open-source Tulu 3 8B Preference Mixture
+dataset(Lambertetal.,2025)usingoriginalhyperparameters.
+4 EXPERIMENTS AND RESULTS
+Weevaluatetheperformanceofourcybersecurity-tunedLLMon(1)ourownbenchmark(Sec.3.3),
+(2)relatedcybersecuritybenchmarks,and(3)generalLLMbenchmarks.
+Evaluation setup. For replicable results, we implement and evaluate RedSage-Bench and prior
+cybersecurity benchmarks in HuggingFace lighteval (Habib et al., 2023). MCQ benchmarks
+are scored with normalized log-likelihood accuracy over answer options, while instruction-tuned
+models and structured output tasks use prefix exact match or regex matching on greedy decoding
+outputs(temperature=0). DetailsforeachtaskareprovidedinAppendixC.1.
+Baseline methods. We evaluate RedSage against both open general-purpose and cybersecurity-
+tunedLLMs.General-purposebaselinesincludeLlama-3.1-8B(Grattafiorietal.,2024)andQwen3-
+8B(Yangetal.,2025),whilespecializedbaselinesincludeLlama-Primus(Base,Merged)(Yuetal.,
+2025), Foundation-Sec (Base, Ins) (Kassianik et al., 2025; Weerawardhena et al., 2025), Lily-
+Cybersecurity-7B-v0.2 (Sego Lily Labs, 2024), and DeepHat-V1-7B (Deep Hat, 2025). We also
+includeQwen3-32BandGPT-5(OpenAI,2025)tocompareagainstlarger-capacityandproprietary
+general-purpose models. Base models are evaluated with text completion, instruction-tuned ones
+withofficialprompttemplates,andweranhybrid-modelinnon-reasoningmodeforfairness.
+Our RedSage variants include three base models: RedSage-8B-CFW (CyberFineWeb only),
+RedSage-8B-Seed (Seed only), and RedSage-8B-Base (CyberFineWeb followed by Seed). We
+further derive instruction-tuned variants: RedSage-8B-Ins (instruction-tuned from Base) and the
+finalRedSage-8B-DPO,whichcombinesalldataandappliesDPOalignment(seeFig.5). Anad-
+ditionallarger-modelscalingexperimentispresentedinAppendixD.1,wherepartialRedSagedata
+improvesaQwen3-32BmodelvialightweightQLoRAfine-tuning,demonstratingthatourcuration
+pipelinetransferseffectivelytohigher-capacityLLMs.
+74.1 EVALUATIONRESULTSONREDSAGE-BENCH
+ResultsonRedSage-Bench. ForMCQs, bothbaseandinstruction-tunedmodelsaretestedinthe
+0-shotsetting,withTab.4showingthatallRedSagevariantsoutperformbaselinesacrosscategories.
+Foropen-endedQ&A,weevaluateinstruction-tunedmodelsusinganLLM-as-Judgerubrictoassess
+both factual correctness and answer quality (Sec. 3.3). As shown in Fig. 6, RedSage achieves not
+only high accuracy but also the best answer quality across categories. More detailed results and
+qualitativeexamplesillustratingmodelpredictionsareprovidedinAppendixC.2.
+Table4: RedSage-MCQ(0-shot). Valuesareaccuracy(%). Abbrevia- MCQs Analysis. Qwen3-8B-
+tions:Gen=General,Frm=Frameworks,Off=OffensiveSkills,CLI= Base, trained on 36T tokens, is
+Command-lineTools,Kali=KaliTools.Boldnumbersindicatethebest the strongest external 8B baseline
+resultof8Bmodels;underlinednumbersindicatethesecondbest. (84.24) and even outperforms
+Foundation-Sec-8B. underscoring
+ModelName Macro Knowledge Skill Tools theimportanceofselectingastrong
+Acc Gen Frm Off CLI Kali base model. Building on it with
+CPT, RedSage gains up to +0.97
+BaseModelEvaluation(TextCompletion)
+macro-accuracy points, with the
+Llama-3.1-8B 78.02 77.42 75.26 82.78 77.78 72.12 largest improvements in Frame-
+Foundation-Sec-8B 78.51 76.82 79.10 83.68 76.64 71.14
+works (+3.00) and Kali (+1.04).
+Qwen3-8B-Base 84.24 83.08 81.94 88.23 85.08 78.86
+RedSage-8B-Seedachievesthebest
+RedSage-8B-CFW 84.86 83.62 83.30 88.81 85.30 79.32
+base result (85.21), demonstrating
+RedSage-8B-Seed 85.21 83.64 84.56 88.82 85.50 79.90
+RedSage-8B-Base 85.05 83.12 84.94 88.72 85.44 79.36 better alignment with the curated
+Seed data. Among instruction-
+InstructModelEvaluation(w/ChatTemplate)
+tuned models, RedSage avoids
+Lily-Cybersecurity-7B-v0.2 71.19 68.78 67.44 76.61 71.44 66.26 the accuracy drop and exceeds
+Llama-Primus-Merged 74.81 74.34 72.34 79.31 74.74 68.82
+Qwen3 by +2.98 (DPO) to +3.88
+Foundation-Sec-8B-Instruct 76.12 74.50 77.10 80.91 74.98 68.30
+Llama-Primus-Base 77.02 76.78 74.10 80.87 76.78 72.72 (Ins). DPOongeneraldataslightly
+Llama-3.1-8B-Instruct 77.05 76.06 73.30 80.90 78.72 72.40 lowers accuracy but stays well
+DeepHat-V1-7B 80.18 77.26 76.90 85.07 81.94 74.82 above baselines. Interestingly,
+Qwen3-8B 81.85 80.46 78.82 86.16 83.92 75.56 RedSage-InssurpassesQwen3-32B
+RedSage-8B-Ins 85.73 84.20 84.98 89.06 86.80 80.30 on average despite its smaller
+RedSage-8B-DPO 84.83 82.48 83.80 88.54 86.30 79.30 size. These results highlight that
+LargerInstruct&ProprietaryModelEvaluation(w/ChatTemplate) our domain-aware CPT and SFT
+Qwen3-32B 85.40 84.08 82.32 89.00 87.60 80.40 enhance robustness across cyberse-
+GPT-5 88.68 88.74 86.54 91.43 90.80 83.14 curityknowledge,skills,andtools.
+Open-ended QA Analysis. RedSage-8B-DPO achieves the best performance (Fig. 6), surpassing
+thesecond-bestmodel(Qwen3-8B)by+7%absolutemeancorrectnessand+0.07inmeanquality
+score. RedSage-8B-Ins attains similar correctness to Qwen3-8B but lags in answer quality (6.43),
+underscoring the role of preference alignment in producing not only accurate but also helpful re-
+sponses. Theremainingmodelsfallsubstantiallybehind,withmeancorrectnessrangingfrom51%
+to40%andqualityscoresfrom5.84to4.28,highlightingasignificantgapfromthetopthree. The
+faceted violin plots further reveal category difficulty: knowledge tasks exhibit higher and tighter
+distributions,skilltaskslieinthemiddlerange,andtool-usetasksshowlowermedianswithheavy
+tails, pinpointingtoolexpertiseastheprimarychallenge. Thesefindingsdemonstratethevalueof
+ourbenchmarkforassessingcybersecuritycapabilitiesinfree-formanswer.
+4.2 EVALUATIONRESULTSONCYBERSECURITYBENCHMARKS
+ResultsonCybersecurityBenchmarks. Weassessgeneralizationonmultipleestablishedbench-
+marks in Tab. 5. For CyberMetric (CyMtc) (Tihanyi et al., 2024), we evaluate all models using
+the500human-verifiedMCQs. WeselectEnglish(En)MCQsfromSecBench(ScBen)(Jingetal.,
+2025). We alsoinclude MCQs relatedto the Computer Security (CSec)from MMLU (Hendrycks
+etal.,2021).ForSECURE(Bhusaletal.,2024),weevaluatemodelsusingtheMCQstypescovering
+MEAT,CWET,andKCV.Further,weevaluateallmodelonCTI-Bench(Alametal.,2024)(MCQ,
+RootCauseMapping(RCM)),,andSecEval(ScEva)(Lietal.,2023)(MCQ).Weprovidefurther
+detailsabouteachbenchmarkandmetricsinAppendixC.3. Basemodelsareevaluatedwith5-shot
+prompting,andinstruction-tunedmodelsin0-shot.
+Analysis. Across related cybersecurity benchmarks, RedSage base models improve over Qwen3-
+8B-Base (80.81%) by up to +3.75 points. CPT with CFW leads on SecBench (83.62), CyMtc
+8Figure 6: RedSageopen-endedQAevaluation. Left: normalizedstackedbarchartsofmeancorrectnessby
+category (0–1), where values inside each segment show the mean and its relative contribution. Models are
+ordered along the x-axis by overall mean correctness. Right: faceted violin plots of LLM-as-Judge quality
+scores(0–10)percategory,showingscoredistributionsacrossmodels. Blackdotsmarkmeansandhorizontal
+linesmarkmedians.BestviewedinZoom.
+Table 5: Benchmark results for Base and Instruct Models. Values are Accuracy (%). Rows are
+sortedbymeanperformance. Bestresultsfor8Bmodelsareinbold,second-bestareunderlined.
+CTI-Bench CyMtc MMLU ScBen ScEva SECURE
+ModelName Mean
+MCQ RCM 500 CSec En MCQ CWET KCV MEAT
+BaseModelEvaluation(5-shot)
+Llama-3.1-8B 75.44 61.12 65.80 84.20 83.00 72.80 54.27 86.34 83.73 87.72
+Foundation-Sec-8B 76.90 62.40 75.40 86.60 80.00 69.86 55.64 88.01 84.38 89.78
+Qwen3-8B-Base 80.81 68.80 63.50 92.00 83.00 82.84 75.60 92.70 75.05 93.81
+RedSage-8B-CFW 82.66 68.40 67.60 93.80 86.00 83.62 76.10 93.33 81.34 93.72
+RedSage-8B-Seed 84.45 70.80 78.60 92.20 88.00 81.61 75.96 93.12 85.47 94.28
+RedSage-8B-Base 84.56 71.04 78.40 92.60 87.00 81.76 75.83 93.22 87.20 94.00
+InstructModelEvaluation(0-shot)
+Lily-Cybersecurity-7B-v0.2 55.74 30.04 43.60 65.20 68.00 57.65 39.72 72.99 49.67 74.79
+Llama-3.1-8B-Instruct 68.52 58.24 58.30 82.80 72.00 59.66 35.37 84.98 82.86 82.47
+Llama-Primus-Merged 71.23 55.92 68.50 83.80 76.00 64.91 39.31 86.13 82.65 83.88
+Llama-Primus-Base 71.69 52.32 68.50 83.80 79.00 63.68 61.15 88.01 65.08 83.69
+DeepHat-V1-7B 75.44 62.08 68.20 86.00 74.00 70.63 56.65 87.07 86.77 87.54
+Foundation-Sec-8B-Instruct 75.44 63.24 69.40 83.00 76.00 68.78 65.46 85.82 82.00 85.29
+Qwen3-8B 75.71 62.76 54.00 88.60 76.00 73.26 65.46 88.11 87.42 85.75
+RedSage-8B-Ins 81.30 70.56 76.70 89.80 78.00 79.91 72.48 91.45 81.34 91.47
+RedSage-8B-DPO 81.10 70.84 70.60 90.00 79.00 80.06 74.22 91.35 82.86 91.00
+LargerInstructandProprietaryModelEvaluation(0-shot)
+Qwen3-32B 82.31 70.04 65.60 91.80 84.00 84.23 76.23 89.46 89.37 90.06
+GPT-5 86.29 76.48 74.20 95.60 86.00 87.48 83.03 92.70 88.72 92.41
+(93.80),andCWET(93.33),raisingthemeanby+1.85.CPTwithSeedexcelsonCTI-RCM(78.60),
+MMLU-CSec (88.00), and MEAT (94.28), lifting the mean by +3.64. Combining both yields the
+best overall mean (84.56) and top scores on CTI-MCQ (71.04) and KCV (87.20). In the 0-shot
+instruct setting, RedSage surpasses Qwen3-8B (75.71%) by +5.39 (DPO) to +5.59 (Ins). Except
+for Lily-Cybersecurity, all domain-tuned baselines outperform Llama-3.1-8B-Instruct, though still
+lag behind RedSage. Despite having far fewer parameters, RedSage comes close to Qwen3-32B
+(82.31mean,onlyabout+1pointhigher)andtrailsGPT-5(86.29mean,roughly+5pointshigher),
+highlightingstrongefficiencyrelativetomuchlargermodels.TheseresultsshowthatCyberFineWeb
+andSeedprovidecomplementarystrengths,whiledifferentpost-trainingstrategiesspecializeacross
+tasks,togethersettingnewstate-of-the-artperformanceincybersecurityLLMevaluation.
+94.3 EVALUATIONRESULTSONGENERALBENCHMARKS
+We use benchmarks from the Open LLM Leaderboard in Lighteval, including ARC-Challenge
+(ARC-C) (Clark et al., 2018), HellaSwag (HSwag) (Zellers et al., 2019), TruthfulQA (TQA) (Lin
+et al., 2022), MMLU (Hendrycks et al., 2021), WinoGrande (WinoG) (Sakaguchi et al., 2021),
+GSM8K(Cobbeetal.,2021),andIFEval(Zhouetal.,2023).ResultsinTab.6showourinstruction-
+tunedmodelsachievescompetitiveresultsongeneraltasks,surpassingbaselinesbyaclearmargin.
+BenchmarkconfigurationsandevaluationmetricsareprovidedinAppendixC.4.
+Table6: OpenLLMLeaderboardBenchmarks. Allvaluesareaccuracy(%). Boldnumbersindicate
+thebestresultfor8Bmodelsandunderlinednumbersindicatethesecondbest.
+ModelName Mean MMLU ARC-C GSM8K HSwag TQA WinoG IFEvl
+BaseModelEvaluation(MeanexcludesIFEval)
+Llama-3.1-8B 61.15 66.31 58.19 49.05 82.08 35.98 75.30 —
+Foundation-Sec-8B 60.24 63.62 58.45 46.17 81.32 38.71 73.16 —
+Qwen3-8B-Base 70.86 78.73 68.09 81.73 79.62 43.84 73.16 —
+RedSage-8B-CFW 69.31 78.63 66.72 81.12 79.26 38.09 72.06 —
+RedSage-8B-Seed 69.58 78.18 65.19 82.34 77.76 42.44 71.59 —
+RedSage-8B-Base 69.23 77.80 65.53 82.03 77.96 42.19 69.85 —
+InstructModelEvaluation(MeanincludesIFEval)
+Lily-Cybersecurity-7B-v0.2 56.98 56.49 58.96 30.86 80.94 48.53 72.06 50.99
+Llama-Primus-Base 64.82 65.09 51.19 71.80 79.49 44.62 72.69 68.85
+DeepHat-V1-7B 64.89 69.53 57.17 77.94 74.80 33.17 69.06 72.58
+Qwen3-8B 65.92 73.59 62.54 75.66 56.70 45.23 62.51 85.21
+Llama-Primus-Merged 66.71 66.17 53.07 75.28 79.07 46.52 73.24 73.58
+Llama-3.1-8B-Instruct 68.20 67.29 57.51 77.41 78.91 45.93 72.61 77.75
+Foundation-Sec-8B-Instruct 69.28 64.11 63.91 77.79 81.35 53.15 68.51 76.17
+RedSage-8B-Ins 73.34 77.38 69.62 86.05 79.00 47.75 73.64 79.97
+RedSage-8B-DPO 74.33 77.07 71.76 82.71 79.87 52.47 73.01 83.44
+LargerInstructandProprietaryModelEvaluation
+Qwen3-32B 73.17 82.11 69.28 87.49 70.93 48.17 65.98 88.26
+GPT-5 91.07 91.4 95.31 91.36 94.85 87.10 87.85 89.60
+IFEval(Instruction-FollowingEval)isexcludedfrombasemodelsasitisdesignedforinstruct-tunedmodels.
+Analysis Among base models, Qwen3-8B-Base is strongest overall (70.86) and leads MMLU
+(78.73) and ARC-C (68.09), while Llama-3.1-8B tops HSwag (82.08) and WinoG (75.30). Red-
+Sagebasesarecompetitiveinmean(69.23–69.58)andachievetaskhighs, includingbestGSM8K
+(82.34, Seed) and second on MMLU (78.63, CFW) and ARC-C (66.72, CFW), where the slight
+drop may stem from our FineWeb-Edu general-knowledge replay strategy. After instruction tun-
+ing, RedSage attains the best overall mean with DPO (74.33) and second with Ins (73.34), setting
+newhighsonARC-C(71.76,DPO),GSM8K(86.05,Ins),MMLU(77.38,Ins),andleadingWinoG
+(73.64, Ins). Foundation-Sec-8B-Instruct leads HSwag (81.35) and TQA (53.15), and Qwen3-8B
+leadsIFEval(85.21),withRedSage-DPOclose(83.44). Forlargerandproprietarymodels,theper-
+formancegapwidens: GPT-5reachesa91.07meanaccuracy,butRedSage-8B-DPOstillsurpasses
+Qwen3-32B (74.33 vs. 73.17) due to gains on HellaSwag, TQA, and WinoGrande, which empha-
+size commonsense reasoning and factuality. These patterns indicate complementary effects: Seed
+boostsmathreasoning(GSM8K),CFWstrengthensgeneralknowledgeandreasoning(MMLUand
+ARC-C),andDPOimprovesinstruction-following(IFEvl),whileRedSageremainscompetitiveon
+general tasks despite cybersecurity tuning. Importantly, the 8B-scale RedSage model can be de-
+ployedlocallyonconsumer-gradeGPUs,enablingprivacy-preservingon-premiseuse.
+5 DISCUSSION AND LIMITATIONS
+The data pipeline, which leverages LLM-generated content and verification, scales effectively but
+maystillpropagatebiasesorinaccuraciesdespitescreening. Nevertheless,ourbenchmarkextends
+existing cybersecurity evaluations, fills missing dimensions, and offers value to the community.
+Finally,asthemodelincorporatesoffensivesecurityknowledge,itcarriesaninherentriskofmisuse.
+Whilesuchdual-useconcernsareintrinsicincybersecurityresearch,weemphasizetheimportance
+ofresponsibleapplicationandgoodsecuritypracticestopromoteethicaluse.
+106 CONCLUSION
+WepresentedREDSAGE,anopencybersecurityassistantthatcombinesalarge-scalepretrainingcor-
+pus(CYBERFINEWEB,11.7Btokens),acuratedseedofauthoritativeresources(REDSAGE-SEED,
+29Kitems,150Mtokens),and266Kaugmenteddialoguesforsupervisedfine-tuning,togetherwith
+REDSAGE-BENCH,a30K-questionbenchmarkspanningknowledge,skills,andtooluse. Atthe8B
+scale, REDSAGE achievesstate-of-the-artresults, surpassingbaselinesbyupto+5.9pointsoncy-
+bersecuritytasksand+5.0ongeneralLLMbenchmarks,whileavoidingthepost-tuningdegradation
+observedinpriormodels. BecauseRedSagerunsat8B,itsupportsprivacy-preserving,on-premde-
+ploymentonconsumer-gradeGPUs,enablingpracticalusewithoutrelyingoncloudinference. We
+will release all models, datasets, and code to support reproducibility and accelerate open research
+onpracticalanddomain-specializedAIassistantsforcybersecurity.
+7 ETHICS STATEMENT
+ThisworkadherestotheICLRCodeofEthics. Alldatasetsusedinthisstudywerederivedexclu-
+sively from publicly available and internet-accessible sources. Our large-scale pretraining corpus
+buildsdirectlyonpriorworkthatalreadyappliedextensivefiltering,deduplication,andremovalof
+personallyidentifiableinformation(PII).Wefurtherappliedadditionalqualitycheckstoensurethat
+thedatacontainonlynon-sensitiveandappropriatelylicensedcontent.
+We note that some components of the curated REDSAGE datasets may include publicly available
+butcopyrightedresources(e.g.,educationalportals,onlinetutorials,ornewsarticles). Suchcontent
+wasusedsolelyfornon-commercialacademicresearch,andwewillnotredistributetheseresources
+withoutobtainingthenecessarypermissionsfromtherightsholders. Onlyaggregatedstatisticsare
+reported in this paper, and any public release of datasets will exclude copyrighted material unless
+explicitapprovalhasbeensecured.
+As part of the writing process, we used large language models responsibly and only for editorial
+assistance(e.g.,polishingphrasing,improvingreadability,andcheckinggrammar).
+The REDSAGE modelsarereleasedstrictlyforresearchpurposesandnotintendedfordeployment
+inreal-worldsecurityoperationswithoutadditionalsafeguards. Tosupportresponsibleuse,wewill
+makemodels,datasets,andcodeopenlyavailableunderresearch-friendlylicenseswithcleardocu-
+mentationandusageguidelines,promotingtransparency,reproducibility,andcommunitybenefit.
+8 REPRODUCIBILITY STATEMENT
+Wearecommittedtoadvancingreproducibilityandopenresearchincybersecurity-orientedLLMs
+by releasing our datasets, models, and code. The collection and augmentation of our datasets for
+domain-aware pre- and post-training are described in Sec. 3, with detailed descriptions, statistics,
+andimplementationdetails(includingprompttemplates)providedinAppendixA.Modeltraining
+proceduresarepresentedinSec.3.4,withfurtherimplementationdetailsinAppendixB.
+OurmodelsaretrainedusingtheAxolotlframework(Axolotlmaintainersandcontributors,2023),
+whichfacilitatesdirectreplicationthroughreusableconfigurationfiles;usersneedonlyreplacethe
+basemodelanddataset. AllhyperparametersarefullyspecifiedinAppendixB.Forevaluation,we
+implementallbenchmarksusingtheHuggingFaceLightEvalframework(Habibetal.,2023),ensur-
+ingreproducibleresultsandsupportingevaluationofarbitraryLLMsbyspecifyingthebenchmark
+configuration.Ourevaluationprotocol,comparedmodels,andbenchmarkdetailsaredocumentedin
+Sec.4andAppendixC.Alldatasets,code,andevaluationpipelineswillbereleasedasopen-source.
+REFERENCES
+0xdf. 0xdf: Penetrationtestingwrite-upsandctfnotes. https://0xdf.gitlab.io/,2025.
+Accessed: 2025-09-01.
+Ehsan Aghaei, Xi Niu, Waseem Shadid, and Ehab Al-Shaer. Securebert: A domain-specific lan-
+guagemodelforcybersecurity. InFengjunLi,KaitaiLiang,ZhiqiangLin,andSokratisK.Kat-
+11sikas(eds.),SecurityandPrivacyinCommunicationNetworks,pp.39–56,Cham,2023.Springer
+NatureSwitzerland. ISBN978-3-031-25538-0.
+Md Tanvirul Alam, Dipkamal Bhusal, Le Nguyen, and Nidhi Rastogi. CTIBench: A bench-
+markforevaluatingLLMsincyberthreatintelligence. InTheThirty-eightConferenceonNeu-
+ral Information Processing Systems Datasets and Benchmarks Track, 2024. URL https:
+//openreview.net/forum?id=iJAOpsXo2I.
+Axolotlmaintainersandcontributors. Axolotl: Opensourcellmpost-training,2023. URLhttps:
+//github.com/axolotl-ai-cloud/axolotl.
+ElieBakouch,LoubnaBenAllal,AntonLozhkov,NouamaneTazi,LewisTunstall,CarlosMiguel
+Patiño, Edward Beeching, Aymeric Roucher, Aksel Joonas Reedi, Quentin Gallouédec, Kashif
+Rasul, NathanHabib, ClémentineFourrier, HynekKydlicek, GuilhermePenedo, HugoLarcher,
+MathieuMorlon, VaibhavSrivastav, JoshuaLochner, Xuan-SonNguyen, ColinRaffel, Leandro
+von Werra, andThomas Wolf. SmolLM3: smol, multilingual, long-contextreasoner. https:
+//huggingface.co/blog/smollm3,2025.
+DipkamalBhusal,MdTanvirulAlam,LeNguyen,AshimMahara,ZacharyLightcap,RodneyFra-
+zier, Romy Fieblinger, Grace Long Torales, Benjamin A. Blakely, and Nidhi Rastogi. SE-
+CURE: Benchmarking Large Language Models for Cybersecurity . In 2024 Annual Computer
+Security Applications Conference (ACSAC), pp. 15–30, Los Alamitos, CA, USA, December
+2024. IEEE Computer Society. doi: 10.1109/ACSAC63791.2024.00019. URL https:
+//doi.ieeecomputersociety.org/10.1109/ACSAC63791.2024.00019.
+RajChandel. Hackingarticles: Ethicalhackingtutorialsandwrite-ups. https://www.hackin
+garticles.in/,2025. Accessed: 2025-09-01.
+Nur Ilzam Che Mat, Norziana Jamil, Yunus Yusoff, and Miss Laiha Mat Kiah. A systematic lit-
+eraturereviewonadvancedpersistentthreatbehaviorsanditsdetectionstrategy. JournalofCy-
+bersecurity, 10(1):tyad023, 01 2024. ISSN 2057-2085. doi: 10.1093/cybsec/tyad023. URL
+https://doi.org/10.1093/cybsec/tyad023.
+PeterClark,IsaacCowhey,OrenEtzioni,TusharKhot,AshishSabharwal,CarissaSchoenick,and
+OyvindTafjord. Thinkyouhavesolvedquestionanswering? tryarc,theai2reasoningchallenge.
+arXivpreprintarXiv:1803.05457,2018.
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz Kaiser,
+Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano, et al. Training verifiers to
+solvemathwordproblems. arXivpreprintarXiv:2110.14168,2021.
+DeepHat. Deephat: Uncensoredaifordevsecops,2025. URLhttps://www.deephat.ai/.
+AccessedSeptember16,2025.StatestrainingonoveronemillionsupervisedQ&Apairs.
+GeeksforGeeks. Geeksforgeeks. https://www.geeksforgeeks.org/, 2008. Founded
+2008,accessed2025-09-24;tutorialsandeducationalcontent.
+GoogleSecurityBlog. Googlelaunchessec-geminiv1: anewexperimentalaimodelforcyberse-
+curity. https://security.googleblog.com/2025/04/google-launches-sec
+-gemini-v1-new.html,2025. Blogpost;Accessed: 2025-09-16.
+AaronGrattafiori,AbhimanyuDubey,AbhinavJauhri,AbhinavPandey,AbhishekKadian,Ahmad
+Al-Dahle,AieshaLetman,AkhilMathur,AlanSchelten,AlexVaughan,etal. Thellama3herd
+ofmodels. arXivpreprintarXiv:2407.21783,2024.
+Yiduo Guo, Jie Fu, Huishuai Zhang, and Dongyan Zhao. Efficient domain continual pretraining
+by mitigating the stability gap. In Wanxiang Che, Joyce Nabende, Ekaterina Shutova, and Mo-
+hammad Taher Pilehvar (eds.), Proceedings of the 63rd Annual Meeting of the Association for
+Computational Linguistics (Volume 1: Long Papers), pp. 32850–32870, Vienna, Austria, July
+2025.AssociationforComputationalLinguistics. ISBN979-8-89176-251-0. doi: 10.18653/v1/
+2025.acl-long.1578. URLhttps://aclanthology.org/2025.acl-long.1578/.
+12NathanHabib,ClémentineFourrier,HynekKydlícˇek,ThomasWolf,andLewisTunstall. Lighteval:
+Alightweightframeworkforllmevaluation,2023. URLhttps://github.com/hugging
+face/lighteval.
+HackTricks. Hacktricks: Hackingtechniquesandtricks. https://book.hacktricks.wiki
+/en/index.html,2025. Accessed: 2025-09-01.
+DanHendrycks,CollinBurns,StevenBasart,AndyZou,MantasMazeika,DawnSong,andJacob
+Steinhardt. Measuring massive multitask language understanding. In International Conference
+onLearningRepresentations,2021. URLhttps://openreview.net/forum?id=d7KB
+jmI3GmQ.
+Adam Ibrahim, Benjamin Thérien, Kshitij Gupta, Mats Leon Richter, Quentin Gregory Anthony,
+EugeneBelilovsky,TimothéeLesort,andIrinaRish.Simpleandscalablestrategiestocontinually
+pre-trainlargelanguagemodels.TransactionsonMachineLearningResearch,2024.ISSN2835-
+8856. URLhttps://openreview.net/forum?id=DimPeeCxKO.
+IETF.Requestforcomments(rfc)series.https://www.rfc-editor.org/,2025.Accessed:
+2025-09-24.
+(ISC)². 2024 ISC2 Cybersecurity Workforce Study. Technical report, (ISC)², Oct 2024. URL
+https://www.isc2.org/Insights/2024/10/ISC2-2024-Cybersecurity-W
+orkforce-Study.
+PengfeiJing,MengyunTang,XiaorongShi,XingZheng,SenNie,ShiWu,YongYang,andXiapu
+Luo. Secbench: Acomprehensivemulti-dimensionalbenchmarkingdatasetforllmsincyberse-
+curity,2025. URLhttps://arxiv.org/abs/2412.20787.
+Kali. Kalitools—officialkalilinuxpenetrationtestingutilities. https://www.kali.org/t
+ools/,2025. Accessed: 2025-09-01.
+Paul Kassianik, Baturay Saglam, Alexander Chen, Blaine Nelson, Anu Vellore, Massimo Au-
+fiero, FraserBurch, DhruvKedia, AviZohary, SajanaWeerawardhena, AmanPriyanshu, Adam
+Swanda, Amy Chang, Hyrum Anderson, Kojin Oshiba, Omar Santos, Yaron Singer, and Amin
+Karbasi. Llama-3.1-foundationai-securityllm-base-8b technical report, 2025. URL https:
+//arxiv.org/abs/2504.21039.
+NathanLambert,JacobMorrison,ValentinaPyatkin,ShengyiHuang,HamishIvison,FaezeBrah-
+man, Lester James V. Miranda, Alisa Liu, Nouha Dziri, Shane Lyu, Yuling Gu, Saumya Ma-
+lik, Victoria Graf, Jena D. Hwang, Jiangjiang Yang, Ronan Le Bras, Oyvind Tafjord, Chris
+Wilhelm, Luca Soldaini, Noah A. Smith, Yizhong Wang, Pradeep Dasigi, and Hannaneh Ha-
+jishirzi. Tulu 3: Pushing frontiers in open language model post-training, 2025. URL https:
+//arxiv.org/abs/2411.15124.
+Guancheng Li, Yifeng Li, Wang Guannan, Haoyu Yang, and Yang Yu. Seceval: A
+comprehensive benchmark for evaluating cybersecurity knowledge of foundation models.
+https://github.com/XuanwuAI/SecEval,2023.
+StephanieLin,JacobHilton,andOwainEvans. Truthfulqa: Measuringhowmodelsmimichuman
+falsehoods. In Proceedings of the 60th annual meeting of the association for computational
+linguistics(volume1: longpapers),pp.3214–3252,2022.
+linux.die.net. Linuxmanpages—linux.die.netmanualrepository. https://linux.die.ne
+t/man/,2025. Accessed: 2025-09-01.
+Zefang Liu, Jialei Shi, and John F Buford. Cyberbench: A multi-task benchmark for evaluating
+large language models in cybersecurity. In AAAI 2024 Workshop on Artificial Intelligence for
+CyberSecurity,2024.
+AntonLozhkov,LoubnaBenAllal,LeandrovonWerra,andThomasWolf. Fineweb-edu: thefinest
+collectionofeducationalcontent,2024. URLhttps://huggingface.co/datasets/Hu
+ggingFaceFW/fineweb-edu.
+13ArindamMitra,LucianoDelCorro,GuoqingZheng,ShwetiMahajan,DanyRouhana,AndresCo-
+das,YadongLu,Wei-geChen,OlgaVrousgos,CorbyRosset,etal. Agentinstruct: Towardgen-
+erativeteachingwithagenticflows. arXivpreprintarXiv:2407.03502,2024.
+MITRECorporation. MITREATT&CK:Adversarialtactics,techniques,andcommonknowledge.
+https://attack.mitre.org/,2025a. Accessed: 2025-09-01.
+MITRE Corporation. CAPEC: Common attack pattern enumeration and classification. https:
+//capec.mitre.org/,2025b. Accessed: 2025-09-01.
+MITRE Corporation. CWE: Common weakness enumeration. https://cwe.mitre.org/,
+2025c. Accessed: 2025-09-01.
+NIST. Nistcybersecuritypublications. https://csrc.nist.gov/publications,2025a.
+Accessed: 2025-09-24.
+NIST. National vulnerability database (nvd). https://nvd.nist.gov, 2025b. Accessed:
+2025-09-24.
+NullByte. Nullbyte—ethicalhackingtutorialsandwhite-hatguides. https://null-byte.
+wonderhowto.com/,2025. Accessed: 2025-09-01.
+OpenAI. Gpt-5 system card. Technical report, OpenAI, San Francisco, CA, August 2025. URL
+https://cdn.openai.com/gpt-5-system-card.pdf. Version dated August 13,
+2025.
+YoungjaParkandWeiqiuYou.Apretrainedlanguagemodelforcyberthreatintelligence.InMingx-
+uan Wang and Imed Zitouni (eds.), Proceedings of the 2023 Conference on Empirical Methods
+inNaturalLanguageProcessing: IndustryTrack,pp.113–122,Singapore,December2023.As-
+sociation for Computational Linguistics. doi: 10.18653/v1/2023.emnlp-industry.12. URL
+https://aclanthology.org/2023.emnlp-industry.12/.
+ElijahPelofske,LorieMLiebrock,VincentUrias,etal. Anenhancedmachinelearningtopicclas-
+sificationmethodologyforcybersecurity. InCS&ITConferenceProceedings,volume11.CS&
+ITConferenceProceedings,2021.
+GuilhermePenedo, HynekKydlícˇek, LoubnaBenallal, AntonLozhkov, MargaretMitchell, Colin
+Raffel, Leandro Von Werra, and Thomas Wolf. The fineweb datasets: Decanting the web for
+the finest text data at scale. In The Thirty-eight Conference on Neural Information Processing
+Systems Datasets and Benchmarks Track, 2024a. URL https://openreview.net/for
+um?id=n6SCkn2QaG.
+GuilhermePenedo,HynekKydlícˇek,AlessandroCappelli,MarioSasko,andThomasWolf. Data-
+trove: largescaledataprocessing,2024b. URLhttps://github.com/huggingface/d
+atatrove.
+RafaelRafailov,ArchitSharma,EricMitchell,ChristopherDManning,StefanoErmon,andChelsea
+Finn. Directpreferenceoptimization:Yourlanguagemodelissecretlyarewardmodel. Advances
+inneuralinformationprocessingsystems,36:53728–53741,2023.
+PriyankaRanade,AritranPiplai,AnupamJoshi,andTimFinin.Cybert:Contextualizedembeddings
+for the cybersecurity domain. In 2021 IEEE International Conference on Big Data (Big Data),
+pp.3334–3342,2021. doi: 10.1109/BigData52589.2021.9671824.
+roadmap.sh.Cybersecurityroadmap:Learntobecomeacybersecurityexpert,2025.URLhttps:
+//roadmap.sh/cyber-security. Accessed: 2025-09-24.
+KeisukeSakaguchi,RonanLeBras,ChandraBhagavatula,andYejinChoi. Winogrande: anadver-
+sarial winograd schema challenge at scale. Commun. ACM, 64(9):99–106, August 2021. ISSN
+0001-0782. doi: 10.1145/3474381. URLhttps://doi.org/10.1145/3474381.
+Salahuddin Salahuddin, Ahmed Hussain, Jussi Löppönen, Toni Jutila, and Panos Papadimitratos.
+Less data, more security: Advancing cybersecurity llms specialization via resource-efficient
+domain-adaptivecontinuouspre-trainingwithminimaltokens. arXivpreprintarXiv:2507.02964,
+2025.
+14SegoLilyLabs. Lily-cybersecurity-7b-v0.2(modelcard). https://huggingface.co/seg
+olilylabs/Lily-Cybersecurity-7B-v0.2,2024. Accessed: 2025-09-16.
+Minghao Shao, Sofija Jancheska, Meet Udeshi, Brendan Dolan-Gavitt, Kimberly Milner, Boyuan
+Chen, Max Yin, Siddharth Garg, Prashanth Krishnamurthy, Farshad Khorrami, et al. Nyu ctf
+bench: Ascalableopen-sourcebenchmarkdatasetforevaluatingllmsinoffensivesecurity. Ad-
+vancesinNeuralInformationProcessingSystems,37:57472–57498,2024.
+swisskyrepo. Payloadsallthethings: Usefulpayloadsandbypasses. https://github.com/s
+wisskyrepo/PayloadsAllTheThings,2025. Accessed: 2025-09-01.
+The OWASP Foundation. OWASP Top 10: The ten most critical web application security risks.
+https://owasp.org/www-project-top-ten/,2025. Accessed: 2025-09-01.
+TheHackerNews. Cybersecurity news reports. https://thehackernews.com/, 2025.
+Accessed: 2025-09-24.
+NorbertTihanyi,MohamedAmineFerrag,RidhiJain,TamasBisztray,andMerouaneDebbah. Cy-
+bermetric: a benchmark dataset based on retrieval-augmented generation for evaluating llms in
+cybersecurity knowledge. In 2024 IEEE International Conference on Cyber Security and Re-
+silience(CSR),pp.296–302.IEEE,2024.
+tldrpages. tldr-pages:Community-maintainedcommand-linecheatsheets. https://github.c
+om/tldr-pages/tldr,2025. Accessed: 2025-09-01.
+ShengyeWan,CyrusNikolaidis,DanielSong,DavidMolnar,JamesCrnkovich,JaysonGrace,Man-
+ish Bhatt, Sahana Chennabasappa, Spencer Whitman, Stephanie Ding, et al. Cyberseceval 3:
+Advancingtheevaluationofcybersecurityrisksandcapabilitiesinlargelanguagemodels. arXiv
+preprintarXiv:2408.01605,2024.
+FengWang,ZeshengShi,BoWang,NanWang,andHanXiao.Readerlm-v2:Smalllanguagemodel
+forhtmltomarkdownandjson. arXivpreprintarXiv:2503.01151,2025.
+Benjamin Warner, Antoine Chaffin, Benjamin Clavié, Orion Weller, Oskar Hallström, Said
+Taghadouini, Alexis Gallagher, Raja Biswas, Faisal Ladhak, Tom Aarsen, et al. Smarter, bet-
+ter, faster, longer: A modern bidirectional encoder for fast, memory efficient, and long context
+finetuningandinference. InProceedingsofthe63rdAnnualMeetingoftheAssociationforCom-
+putationalLinguistics(Volume1: LongPapers),pp.2526–2547,2025.
+Sajana Weerawardhena, Paul Kassianik, Blaine Nelson, Baturay Saglam, Anu Vellore, Aman
+Priyanshu, Supriti Vijay, Massimo Aufiero, Arthur Goldblatt, Fraser Burch, et al. Llama-3.1-
+foundationai-securityllm-8b-instructtechnicalreport. arXivpreprintarXiv:2508.01059,2025.
+AnYang, AnfengLi, BaosongYang, BeichenZhang, BinyuanHui, BoZheng, BowenYu, Chang
+Gao,ChengenHuang,ChenxuLv,ChujieZheng,DayihengLiu,FanZhou,FeiHuang,FengHu,
+Hao Ge, Haoran Wei, Huan Lin, Jialong Tang, Jian Yang, Jianhong Tu, Jianwei Zhang, Jianxin
+Yang, Jiaxi Yang, Jing Zhou, Jingren Zhou, Junyang Lin, Kai Dang, Keqin Bao, Kexin Yang,
+LeYu,LianghaoDeng,MeiLi,MingfengXue,MingzeLi,PeiZhang,PengWang,QinZhu,Rui
+Men, RuizeGao,ShixuanLiu,ShuangLuo, TianhaoLi, TianyiTang, WenbiaoYin, Xingzhang
+Ren, Xinyu Wang, Xinyu Zhang, Xuancheng Ren, Yang Fan, Yang Su, Yichang Zhang, Yinger
+Zhang,YuWan,YuqiongLiu,ZekunWang,ZeyuCui,ZhenruZhang,ZhipengZhou,andZihan
+Qiu. Qwen3technicalreport. arXivpreprintarXiv:2505.09388,2025.
+Yao-Ching Yu, Tsun-Han Chiang, Cheng-Wei Tsai, Chien-Ming Huang, and Wen-Kwang Tsao.
+Primus: A pioneering collection of open-source datasets for cybersecurity LLM training. In
+Christos Christodoulopoulos, Tanmoy Chakraborty, Carolyn Rose, and Violet Peng (eds.), Pro-
+ceedings of the 2025 Conference on Empirical Methods in Natural Language Processing, pp.
+10391–10413,Suzhou,China,November2025.AssociationforComputationalLinguistics.ISBN
+979-8-89176-332-6. doi: 10.18653/v1/2025.emnlp-main.527. URLhttps://aclantholo
+gy.org/2025.emnlp-main.527/.
+ZhengminYu,JiutianZeng,SiyiChen,WenhanXu,DandanXu,XiangyuLiu,ZonghaoYing,Nan
+Wang,YuanZhang,andMinYang. Cs-eval: Acomprehensivelargelanguagemodelbenchmark
+forcybersecurity. arXivpreprintarXiv:2411.16239,2024.
+15Rowan Zellers, Ari Holtzman, Yonatan Bisk, Ali Farhadi, and Yejin Choi. HellaSwag: Can a
+machinereallyfinishyoursentence? InAnnaKorhonen,DavidTraum,andLluísMàrquez(eds.),
+Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pp.
+4791–4800,Florence,Italy,July2019.AssociationforComputationalLinguistics. doi:10.18653
+/v1/P19-1472. URLhttps://aclanthology.org/P19-1472/.
+Andy K Zhang, Neil Perry, Riya Dulepet, Joey Ji, Celeste Menders, Justin W Lin, Eliot Jones,
+GashonHussein,SamanthaLiu,DonovanJulianJasper,PuraPeetathawatchai,AriGlenn,Vikram
+Sivashankar,DanielZamoshchin,LeoGlikbarg,DerekAskaryar,HaoxiangYang,AolinZhang,
+Rishi Alluri, Nathan Tran, Rinnara Sangpisit, Kenny O Oseleononmen, Dan Boneh, Daniel E.
+Ho,andPercyLiang. Cybench: Aframeworkforevaluatingcybersecuritycapabilitiesandrisks
+of language models. In The Thirteenth International Conference on Learning Representations,
+2025. URLhttps://openreview.net/forum?id=tc90LV0yRL.
+Jeffrey Zhou, Tianjian Lu, Swaroop Mishra, Siddhartha Brahma, Sujoy Basu, Yi Luan, Denny
+Zhou, and Le Hou. Instruction-following evaluation for large language models. arXiv preprint
+arXiv:2311.07911,2023.
+16A DATASET DETAILS
+ThissectiondetailsthedatasetswecreatedandcuratedfortrainingourLLM.Alltokencountsare
+computedwiththeGPT-2tokenizer3,followingtheconventionsofFineWeb(Penedoetal.,2024a).
+A.1 CYBERFINEWEB
+CyberFineWebisderivedfromtheoriginalFineWebdataset(Penedoetal.,2024a)4,alarge-scale,
+cleanedwebcorpusaggregatedfromCommonCrawl. AlthoughFineWebiscontinuouslyupdated,
+forourdevelopmentweusedallsubsetsreleasedbetweenSummer2013(CC-MAIN-2013-20)and
+December2024(CC-MAIN-2024-51). Thisselectioncomprises104subsets,totaling46,934GBof
+dataand17.2trilliontokens.
+TextClassificationModelToextractthecybersecuritycorpusfromFineWeb,wetrainedatextclas-
+sification model based on ModernBERT-base (Warner et al., 2025), a state-of-the-art transformer
+encoder.ThetrainingdatacamefromtheCybersecurityTopicClassificationdataset(Pelofskeetal.,
+2021), which contains 9.27M labeled training samples (cybersecurity vs. non-cybersecurity) col-
+lectedfromReddit,StackExchange,andarXiv,alongwith459Kvalidationsamplesfromwebarti-
+cles. Thelabelsinthisdatasetoriginatefromforumcategories,tags,andkeywordmetadatarather
+than from LLM-generated annotations. To reduce context ambiguity, we filtered out very short
+texts,yielding4.62Mtrainingsamplesand2.46Kvalidationsamples. Themodelwastrainedwith
+theAdamoptimizerfor2epochsusingalearningrateof2e-5anda10%warmupratio. Onthevali-
+dationset,themodelachieved93.8%precision,90.2%recall,91.4%F1scoreand97.3%accuracy.
+Text Filtering We applied the trained classifier to each subset of FineWeb. Figure 7 shows the
+numberofidentifiedcybersecuritysamplesandtheirrelativeproportionacrossallsubsetsordered
+by crawl date. The results indicate a steady increase in cybersecurity-related content on the web,
+underscoringthegrowingimportanceofthisdomain.Intotal,thisfilteringprocessproducedapprox-
+imately125Mdocuments(∼89.8Btokens),correspondingtoabout0.77%oftheoriginalFineWeb.
+Figure7:NumberoffilteredcybersecuritysamplesandtheirratioovertimeacrossFineWebsubsets.
+General Knowledge Integration Due to compute constraints, we partitioned the dataset into 20
+chronological chunks. To mitigate catastrophic forgetting of general-domain knowledge, we first
+select a fixed 100B-token subset from FineWeb-Edu (Lozhkov et al., 2024). For each chunk, we
+thenrandomlyresampleddatafromthissubsettomatch30%ofthechunk’ssize,ensuringbalanced
+exposuretogeneral-domaincontentthroughouttraining.
+Deduplication Although FineWeb includes text deduplication in its pipeline, it is applied only
+within individual CommonCrawl dumps. We applied global deduplication across our mixed cor-
+3GPT-2:openai-community/gpt2
+4FineWebDatasets:HuggingFaceFW/fineweb
+17pus using MinHash-LSH implemented in DataTrove (Penedo et al., 2024b), with 64-bit precision,
+14buckets,and8hashesperbucket.Thisreducedthecorpussizeby58.4%indocuments(to∼52M)
+andby47.9%intokens(to∼46.8B).
+FinalCorpusTofitourtrainingbudget, weselectedthelatest5chunksfromthemixed, dedupli-
+cateddata.Thisformedourfinalpretrainingcorpus,containing∼13Mdocuments(∼11.7Btokens).
+A summary of the dataset filtering and processing steps from FineWeb to the final CyberFineWeb
+corpusisprovidedinTable7.
+Table 7: Summary of dataset filtering and processing stages from FineWeb to the final Cy-
+berFineWebcorpus. RetentionpercentagesarerelativetotheoriginalFineWeb.
+Stage Documents Tokens Retention(vs.FineWeb)
+FineWeb(2013-2024,104subsets) ∼24.5B ∼17.2T 100%
+CyberFineWeb(afterfiltering) ∼125M ∼89.8B 0.51%docs/0.52%tokens
+General-mixing+deduplication(20chunks) ∼52M ∼46.8B 0.21%docs/0.27%tokens
+FinalCyberFineWebcorpus(latest5chunks) ∼13M ∼11.7B 0.053%docs/0.068%tokens
+A.2 REDSAGESEED
+RedSageSeed. Ourcuratedcollectionofpubliclyavailablecybersecurityresourcesisdesignedto
+providehigh-qualitypretrainingdatainstructuredMarkdownformat.Weexcludedprivateresources
+suchasbookstoensurethatalldataareopenlyaccessible.
+Someresources, suchasMITREATT&CK,CAPEC,andCWE(MITRECorporation,2025a;b;c),
+are distributed as XML files, which we parsed into structured Markdown while preserving the
+original website organization. Other resources, such as tldr-pages (tldr pages, 2025) and
+kali-tools (Kali, 2025), were already available in Markdown format. For curated webpages,
+wecrawledandprocessedthemusingJinaReaderLM-v2(Wangetal.,2025)toconverttheHTML
+contentintoMarkdown.
+The RedSage-Seed corpus is organized into three main categories: knowledge, skills, and tools.
+Withinknowledge,wedistinguishbetween(i)General,whichincludessourcessuchasWikipedia
+androadmap.sh(roadmap.sh,2025),and(ii)Frameworks,whichcoverstructuredknowledgebases
+from MITRE and the OWASP Foundation (The OWASP Foundation, 2025). For skills, we cur-
+rently focus on offensive security, curating resources such as offensive tricks (HackTricks, 2025),
+articles (Chandel, 2025), community tutorial (Null Byte, 2025), and CTF write-ups (0xdf, 2025).
+Finally,toolsaredividedinto(i)CLI,whichincludesmulti-platformcommand-lineresourcessuch
+as tldr-pages (tldr pages, 2025) and Unix man pages, and (ii) Kali Linux Tools (Kali, 2025),
+whichprovidedocumentationforacuratedsetofcybersecuritytools. Datasetstatisticsanddetailed
+categorizationarepresentedinTable8. Theseresourcesalsoserveasthefoundationforouragentic
+augmentedcybersecurityconversationsandbenchmarking.
+RedSageDump. TocomplementRedSage-Seedandexpandthediversityofhigh-qualitydatafor
+cybersecurity pretraining, we curated additional publicly available resources under the RedSage
+Dumpcollection. Thiscorpusaggregatestechnicaldocuments, standards, anddomain-specificre-
+portsthatareparticularlyrelevantfordevelopingacybersecurityassistant. Specifically,itincludes:
+(i)ComputerEducationPortals(GeeksforGeeks,2008),whichprovidestructuredtutorialsandtrain-
+ing materials on computer science and cybersecurity fundamentals; (ii) Cybersecurity News (The-
+HackerNews, 2025), capturing timely reports and analyses of emerging threats and incidents; (iii)
+RFCEntries(IETF,2025),representingstandardizedinternetprotocolsandtechnicalspecifications;
+(iv) NIST Publications (NIST, 2025a), offering authoritative cybersecurity and compliance guide-
+lines; (v) Primus Seed (Yu et al., 2025), a curated collection of cybersecurity resources originally
+used to pretrain the Primus model; and (vi) the National Vulnerability Database (NVD) (NIST,
+2025b),whichprovidesstructuredvulnerabilityadvisories.
+StatisticsforthesesourcesaresummarizedinTable9. Overall,theRedSageDumpcontains459K
+documentswithatotalof∼700Mtokens. ThiscollectioncomplementsRedSage-Seedbyempha-
+sizingtechnicalstandards,structuredvulnerabilitydata,andup-to-datecybersecurityreporting.
+18Table8: RedSageSeedStatisticsbyCategory: SamplesandTokens
+Configuration Samples Avg.Tokens TotalTokens MinTokens MaxTokens
+Knowledge–General
+CybersecurityWikis 6,636 2,304.77 15,294,454 39 36,812
+CybersecurityRoadmaps 288 3,671.35 1,057,349 86 171,839
+Knowledge–Frameworks
+MITREATT&CK 1,655 4,806.38 7,954,559 366 96,808
+MITRECAPEC 589 654.42 385,453 61 2,444
+MITRECWE 1,346 1,222.46 1,645,431 140 10,679
+OWASP 125 4,313.63 539,204 436 17,253
+Skill–Offensive
+OffensiveTricks 1,050 2,924.06 3,070,263 116 29,902
+HackingArticles 1,384 13,919.66 19,264,809 377 190,391
+NullByteTutorials 1,002 4,402.07 4,410,874 278 79,225
+CTFWrite-ups 596 18,471.77 11,009,175 185 83,759
+Tools–CLI
+TLDRPages(English) 5,335 11,215.81 59,836,346 35 543,349
+UnixManPages 7,608 2,509.00 19,088,472 45 379,876
+Tools–Kali
+KaliDocumentation 265 1,568.08 415,541 53 17,983
+KaliTools 758 7,722.30 5,853,503 169 709,750
+Total(dataset) 28,637 5,231.00 149,825,433 35 709,750
+Table9: RedSageDumpStatistics
+Source Samples Avg.Tokens TotalTokens
+ComputerEducationPortals 160,355 1,986 318,503,184
+CybersecurityNews 13,959 1,431 19,968,138
+RFCEntries 9,674 20,994 203,093,862
+NISTPublications 1,015 29,715 30,161,170
+PrimusSeed(Website,Mitre) 80,336 849 68,233,498
+NationalVulnerabilityDatabase(NVD) 194,134 310 60,173,508
+Total 459,473 1,524 700,133,360
+A.3 REDSAGECONVERSATION
+AgenticDataAugmentation.Oursupervisedfinetuning(SFT)cybersecuritydatasetsaregenerated
+usinganagenticaugmentationpipeline. WefirstsegmenttheRedSage-Seedcorpusintochunksof
+upto32,768tokensusingaMarkdowntextsplitter. Thesechunksserveastheinputtotheplanner
+agent,whichdeterminesappropriateaugmentationstrategies. Withinthispipeline,weadoptLlama-
+3.3-70Bastheteachermodel,asitwasamongthestrongestopen-sourceinstruction-tunedmodels
+thatcouldberunlocallygivenouravailablecomputeduringthedatacreationphase.
+Planner Agent. For each seed data chunk, the planner agent analyzes the content and proposes
+multiple skill sets, each associated with one or more augmentation types and descriptive transfor-
+mations. Thisdesignenablesdiverseaugmentationpathsfromthesamesourcematerial, ensuring
+broadcoverageofcybersecurityskillsandtasks. Belowisourplanneragent’ssystemprompt.
+PlannerAgent’sSystemPrompt
+YouareanAugmentationTypePlannerAgentspecializingincybersecurityandpenetrationtesting.
+Yourroleistoanalyzeaprovidedchunkofseeddataandproduceastructured,comprehensivelistof
+possibleskillsetsandaugmentationtypes. TheresultingsuggestionswillbeusedbyaDataAugmen-
+tationAgenttogenerateconversationaltrainingdataforachatbot. Keepinmindthatthefinaloutput
+shouldlenditselfwelltoturn-baseddialogues,persona-basedQ&A,orscenariosimulationstypicalin
+achatbotenvironment.
+19Objective:
+Given a chunk of preprocessed seed data related to cybersecurity and penetration testing, generate
+a well-structured list of skill sets and corresponding augmentation types. The suggestions should
+improvedatasetquality,diversity,andrelevance,andbeeasilyadaptableintoaconversationalformat
+(e.g., question–answer pairs, scenario-based dialogues, guided reasoning steps). Leverage the seed
+data’sdomaincontexttoensureaccuracyandpracticalutility.
+Input:
+• SeedData: Achunkofpreprocessedmarkdown-formatteddatarelatedtocybersecurityandpene-
+trationtesting.
+Output:
+• StructuredListofSkillSetsandAugmentationTypes(inJSONformat):
+– Includemultipleskillsets,eachwithseveralaugmentationtypes.
+– Foreachaugmentationtype,provideabriefdescriptionthatclarifiesitsintendedtransformation
+andexplainshowitcouldbeadaptedintoaconversationalformatforachatbot.
+Guidelines:
+1. RelevanceandGrounding:
+• Ensureallskillsetsandaugmentationtypesarerelevanttocybersecurityandpenetrationtest-
+ing.
+• Ground the augmentations in the seed data to maintain accuracy. If the seed data mentions
+specifictools,vulnerabilities,orscenarios,aligntheaugmentationsuggestionsaccordingly.
+2. DiversityandCoverage:
+• Suggestawiderangeofaugmentationstrategiesreflectingvariouspenetrationtestingphases:
+reconnaissance,enumeration,exploitation,post-exploitation,mitigation,andsoforth.
+• Includetraditionaldatatransformations(e.g.,paraphrasing)andadvanced,scenario-basedaug-
+mentations(e.g.,simulatingapenetrationtestconversationbetweenatesterandasecurityan-
+alyst).
+3. ConversationalAdaptability:
+• Considerhoweachaugmentationcouldberepresentedinachatbot-friendlyformat(e.g.,multi-
+turnQ&A,narrativescenarios,role-basedconversations,orstep-by-stepreasoning).
+• Example:avulnerabilityanalysiscouldbecomeaQ&Awherethechatbotexplainsthevulner-
+abilitytoanovice,oraroleplaybetweenred-teamerandblue-teamerdiscussingmitigation.
+4. CreativityandInnovation:
+• Introducenewskillsetsoraugmentationideasbeyondpredefinedexamples.
+• Encouragecreativetransformationsthatleveragethechatbotsetting(persona-basedcoaching,
+guidedthreatmappingdialogues,multi-turnexplorations).
+5. DetailandClarity:
+• Eachaugmentationtypeshouldhaveashortdescriptionexplainingwhatitdoes,howitrelates
+totheseeddata,andhowitcanbeadaptedintoaconversationalformat.
+6. FormatRequirements:
+• ReturnoutputinJSONformatwiththefollowingstructure:
+{
+"skill_sets": [
+{
+"name": "<Skill Set Name>",
+"augmentation_types": [
+{
+"type": "<Descriptive Augmentation Type Name or Title >",
+"description": "<Brief explanation>"
+},
+{
+"type": "<Another Augmentation Type>",
+"description": "<Explanation>"
+}
+]
+20}
+]
+}
+ExampleCategoriesforInspiration(NotExhaustive):
+• ToolCommandGeneration:TurntoolusageintoQ&Aorguidedinstructions.
+• VulnerabilityAnalysis:Conversationalexplanations(seniorengineerteachingjuniortester).
+• AttackSurfaceEnumeration:Brainstormingdialoguebetweenredteamers.
+• ExploitationWorkflows:Multi-turnwalkthroughsofexploitationstages.
+• Post-ExploitationTechniques:Conversationsexplainingpersistenceandmitigation.
+• ThreatMapping:AlignfindingswithMITREATT&CKindialogueform.
+• MitigationRecommendations:RemediationadviceinQ&Aformat.
+• ScenarioSimulation:Role-basedpen-testscenarios(e.g.,testervsclientrep).
+• Step-by-StepReasoning:Guidedreasoningrevealedturnbyturn.
+• Edge-CaseGeneration:Ambiguity/errorhandlingdialogues.
+• ReadingComprehension:Extractingandexplainingvulnerabilityadvisories.
+Task:
+Use the provided seed data to produce a JSON-structured list of skill sets and augmentation types.
+Ensure augmentations can be easily converted into conversational formats. Suggest as many diverse
+andcreativetransformationsaspossible.TheoutputmustfollowthespecifiedJSONformat;otherwise,
+itwillberejected.
+Forexample,giventhefollowingseeddata:
+arp-scan
+Homepage:https://github.com/royhills/arp-scan
+Repository:https://salsa.debian.org/pkg-security-team/arp-scan
+Architectures:any
+Version:1.10.0-2
+Metapackages:kali-linux-default,kali-linux-everything,kali-linux-headless,kali-linux-large
+arp-scan
+arp-scanisacommand-linetoolthatusestheARPprotocoltodiscoverandfingerprintIPhostsonthe
+localnetwork.ItisavailableforLinuxandBSDundertheGPLlicence.
+Installedsize:1.53 MB
+Howtoinstall:sudo apt install arp-scan
+Dependencies:
+• libc6
+• libcap2
+• libpcap0.8t64
+arp-fingerprint
+FingerprintasystemusingARP
+root@kali:~# arp−fingerprint −h
+Usage: arp−fingerprint [options] <target >
+Fingerprint the target system using arp−scan.
+'options ' is one or more of:
+−h Display this usage message.
+−v Give verbose progress messages.
+−o <option−string > Pass specified options to arp−scan
+−l Fingerprint all targets in the local net.
+arp-scan
+SendARPrequeststotargethostsanddisplayresponses
+21root@kali:~# arp−scan −h
+Usage: arp−scan [options] [hosts ...]
+Target hosts must be specified on the command line unless the
+−−file or
+−−localnet option is used.
+arp−scan uses raw sockets , which requires privileges on some
+systems:
+Linux with POSIX.1e capabilities support using libcap:
+arp−scan is capabilities aware. It requires CAP_NET_RAW in
+the permitted
+set and only enables that capability for the required
+functions .
+BSD and macOS:
+You need read/write access to /dev/bpf*
+Any operating system:
+Running as root or SUID root will work on any OS but other
+methods
+are preferable where possible .
+Targets can be IPv4 addresses or hostnames. You can also use CIDR
+notation
+(10.0.0.0/24) (network and broadcast included) , ranges
+(10.0.0.1 −10.0.0.10) ,
+and network:mask (10.0.0.0:255.255.255.0) .
+Options:
+The data type for option arguments is shown by a letter in angle
+brackets:
+<s> Character string .
+<i> Decimal integer , or hex if preceeded by 0x e.g. 2048 or 0x800.
+<f> Floating point decimal number.
+<m> MAC address , e.g. 01:23:45:67:89:ab or 01−23−45−67−89−ab (case
+insensitive)
+<a> IPv4 address e.g. 10.0.0.1
+<h> Hex encoded binary data. No leading 0x. (case insensitive).
+<x> Something else − see option description .
+General Options:
+−−help or −h Display this usage message and exit .
+−−verbose or −v Display verbose progress messages.
+Can be used than once to increase
+verbosity . Max=3.
+−−version or −V Display program version details and exit .
+Shows the version , license details , libpcap
+version ,
+and whether POSIX.1e capability support is
+included.
+−−interface=<s> or −I <s> Use network interface <s>.
+If this option is not specified , arp−scan
+will search
+the system interface list for the lowest
+numbered ,
+22configured up interface (excluding
+loopback).
+Host Selection:
+−−file=<s> or −f <s> Read hostnames or addresses from the
+specified file
+One name or address pattern per line . Use
+"−" for stdin .
+−−localnet or −l Generate addresses from interface
+configuration .
+Generates list from interface address and
+netmask
+(network and broadcast included). You
+cannot use the
+−−file option or give targets on the
+command line .
+Use −−interface to specify the interface .
+[... Data is trimmed for visualization ...]
+ThePlanerAgentwilloutputthefollowingJSON:
+BeautifiedJSONExample
+{
+"skill_sets": [
+{
+"name": "Network Discovery",
+"augmentation_types": [
+{
+"type": "ARP Scan Simulation",
+"description": "Simulate an ARP scan on a local network,
+displaying IP and MAC addresses of responding hosts,
+adaptable into a Q&A format where the chatbot explains
+the process and results."
+},
+{
+"type": "Host Fingerprinting",
+"description": "Transform host fingerprinting data into a
+conversational explanation, where a chatbot character
+educates another on operating system and device
+identification techniques."
+}
+]
+},
+{
+"name": "Tool Command Generation",
+"augmentation_types": [
+{
+"type": "arp-scan Command Crafting",
+"description": "Generate `arp-scan` commands based on user
+input (e.g., IP range, interface), and have the chatbot
+walk the user through command construction and
+execution."
+},
+{
+"type": "Custom Vendor Mapping",
+23"description": "Create a conversation where the chatbot
+helps a user understand and customize vendor mapping
+files for `arp-scan`, including explanations of MAC
+addresses and vendors."
+}
+]
+},
+{
+"name": "Output Analysis",
+"augmentation_types": [
+{
+"type": "Result Interpretation",
+"description": "Convert the output of `arp-scan` into a
+guided interpretation session, where the chatbot helps
+the user understand the results, including MAC
+addresses, IP addresses, and potential security
+implications."
+},
+{
+"type": "Round-Trip Time Analysis",
+"description": "Simulate a scenario where the chatbot
+explains and analyzes the round-trip times of ARP
+requests and responses, discussing network latency and
+potential security considerations."
+}
+]
+},
+{
+"name": "Configuration and Troubleshooting",
+"augmentation_types": [
+{
+"type": "Interface Selection and Configuration",
+"description": "Develop a conversation where the chatbot
+assists in selecting and configuring network interfaces
+for `arp-scan`, including troubleshooting common issues."
+},
+{
+"type": "Error Handling and Debugging",
+"description": "Create a scenario-based dialogue where the
+chatbot helps a user debug and resolve common errors
+encountered while using `arp-scan`, such as permission
+issues or network connectivity problems."
+}
+]
+}
+]
+}
+AugmenterAgentEachplanproducedbythePlannerAgentwillbetransformeditintoadetailed,
+multi-turnconversationgroundedintheseeddata.Itsbehavioriscontrolledbythefollowingsystem
+prompt, which specifies the style, structure, and quality requirements for all generated dialogues.
+BelowisthesystempromptusedbytheAugmenterAgent:
+DataAugmentationAgent’sSystemPrompt
+YouaretheSystemSystemPromptforDataAugmentationAgent,specializingincyber-
+securityandpenetrationtesting. Yourgoalistocreateenrichedsyntheticconversation
+datasets based on the provided seed data and augmentation types. All generated conversa-
+tionsmustbe:
+• Thoroughandin-depth
+24• Technicallyaccurateandcoherent
+• Presentedinafixedchat-likeformat
+1. PreserveandExpandSeedData
+1. Study the seed data carefully to avoid losing any key information (e.g., vulnerability
+types,mitigationstrategies,references).
+2. Enhancethetechnicaldepthwherepossible—includedomain-relevantdetails,bestprac-
+tices,orreal-worldexamples.
+2. ApplyAugmentationTypes
+1. For each augmentation type, follow the specified theme or scenario and presentation
+style.
+2. Maintainconsistentdomainintegrityandfactualaccuracythroughout.
+3. UseMulti-TurnConversationforDepth
+1. Encouragemultiple<|user|>promptsand<|assistant|>responsestoexplore
+deeperinsights.
+2. Ineach<|assistant|>response,provide:
+• Enumeratedlistsorbulletpointswhereappropriate
+• Step-by-stepexplanations(e.g.,howanexploitworksorhowtomitigateit)
+• Real-worldscenariosorexamples
+• Referencestoauthoritativeframeworks(e.g.,OWASP,NIST800-53)
+• Actionablebestpractices(e.g.,leastprivilege,securecodingguidelines)
+4. PresentOutputinFixedConversationFormat
+Allfinaloutputs—regardlessoftheaugmentationtype—mustfollow:
+---
+<|start|>
+<|title|>: [Conversation Title]
+<|system|>: [System prompt for the custom assistant's persona, if
+any; otherwise use "You are a helpful AI assistant."]
+<|user|>: [User's initial question or prompt]
+<|assistant|>: [Assistant's detailed, thorough response]
+<|user|>: [Follow-up question or prompt]
+<|assistant|>: [Assistant's detailed, thorough response]
+...
+<|end|>
+---
+• If multiple augmentation types are requested, produce a separate block for each, sepa-
+ratedby--.
+• Makesurethateachconversationblockisself-containedandcoherent.
+• Continue<|user|>/<|assistant|>turnsifyouneedmoredepthorclarification.
+5. GuidelinesforHigh-QualityResponses
+1. IncorporateBestPractices
+• Alwaysreferencesecurecoding,principleofleastprivilege,andrecognizedstandards
+(OWASPTopTen,PCI-DSS,NIST,etc.).
+2. StayOrganized
+• Theassistant’sresponsesshouldbewell-structuredandeasytofollowfortheuser.
+• The responses will be rendered in Markdown, so use appropriate formatting (e.g.,
+newlines(\n\n),headings,lists,bold,italic,codeblocks,etc.).
+• Provideexamplesandanalogiestosimplifycomplexcybersecuritytopics.
+3. DeepenExplanations
+25• Ifdescribinganattack,walkthrougheachstepoftheprocess(discovery,exploita-
+tion,post-exploitation).
+• Ifdescribingmitigations,offercode-levelorconfigurationexampleswhenrelevant.
+4. AddressCommonPitfalls
+• MentiontypicalerrorsinACLusageorvulnerabilityoversight.
+• Suggesthowtoavoidthem.
+6. TipsforBetterConversations
+1. StartBroad,ThenDrillDown
+• Answertheinitialquestionthoroughly.
+• Use follow-up <|user|> prompts to further clarify or expand (e.g., “Could you
+giveareal-worldexample?” or“Pleaseprovideadetailedchecklist.”).
+2. EncourageSummaries
+• Summaries at the end of each conversation can help consolidate all key takeaways
+andrecommendations.
+Giventhe earlierseeddata andplanas anexample, theAugmenter Agentgeneratesthe following
+conversationderivedfromoneoftheplans:
+DataAugmenterOutput: ConversationExamples
+---
+<|start|>
+<|title|>: Network Discovery with ARP Scan Simulation
+<|system|>: You are a cybersecurity expert specializing in network
+discovery and penetration testing.
+<|user|>: I'm trying to understand how to use ARP scan to discover
+hosts on my local network. Can you walk me through the process
+and explain the results?
+<|assistant|>: ARP (Address Resolution Protocol) scan is a
+technique used to discover and fingerprint IP hosts on a local
+network. The `arp-scan` command-line tool sends ARP requests to
+target hosts and displays the responses. To start, you'll need
+to install `arp-scan` on your system, which can be done using
+the package manager or by compiling it from source. Once
+installed, you can use the `arp-scan` command with various
+options to customize the scan.
+Here's an example of a basic ARP scan on the local network:
+```bash
+arp-scan -l
+This command will scan the local network using the information from
+the primary network interface. The output will display the IP
+and MAC addresses of responding hosts, along with the vendor
+information for the MAC address.
+Let's break down the output:
+- Interface: eth0, datalink type: EN10MB (Ethernet): This
+line indicates the network interface being used for the
+scan and the type of data link.
+- Starting arp-scan 1.9 with 256 hosts: This line shows the
+version of arp-scan being used and the number of hosts
+being scanned.
+- 172.16.193.1 00:50:56:c0:00:08 VMware, Inc.: This line
+displays the IP address and MAC address of a responding
+26host, along with the vendor information for the MAC
+address.
+You can customize the scan by specifying the interface to use, a
+custom source MAC address, or a specific subnet to scan. For
+example:
+arp-scan -I eth0 --srcaddr=DE:AD:BE:EF:CA:FE 192.168.86.0/24
+This command scans the subnet 192.168.86.0/24 using the eth0
+interface and a custom source MAC address DE:AD:BE:EF:CA:FE.
+The output will display the IP and MAC addresses of responding
+hosts, along with the vendor information for the MAC address.
+Do you have any specific questions about the ARP scan process or
+the output?
+<|user|>: That's helpful, but I'd like to know more about the
+options available for customizing the scan. Can you explain
+some of the common options used with arp-scan?
+<|assistant|>: Certainly! arp-scan provides a wide range of options
+to customize the scan. Here are some common options:
+- -I or --interface: Specify the network interface to use for
+the scan. For example: arp-scan -I eth0
+- --srcaddr: Specify a custom source MAC address. For
+example: arp-scan --srcaddr=DE:AD:BE:EF:CA:FE
+- --subnet: Specify a subnet to scan. For example: arp-scan
+192.168.86.0/24
+- -r or --retry: Specify the number of retries for each host.
+For example: arp-scan -r 3
+- -t or --timeout: Specify the timeout in milliseconds for
+each host. For example: arp-scan -t 500
+- --resolve: Resolve responding addresses to hostnames. For
+example: arp-scan --resolve
+- --quiet: Display minimal output for each responding host.
+For example: arp-scan --quiet
+These options can be combined to customize the scan. For example:
+arp-scan -I eth0 --srcaddr=DE:AD:BE:EF:CA:FE --subnet
+192.168.86.0/24 -r 3 -t 500 --resolve --quiet
+This command scans the subnet 192.168.86.0/24 using the eth0
+interface, a custom source MAC address DE:AD:BE:EF:CA:FE,
+retries each host 3 times, times out after 500 milliseconds,
+resolves responding addresses to hostnames, and displays
+minimal output.
+You can use the --help option to see a full list of available
+options:
+arp-scan --help
+Do you have any specific questions about these options or would you
+like to know more about advanced features?
+<|user|>: I'd like to know more about the vendor information
+displayed in the output. How does arp-scan determine the vendor
+information, and what can I do with this information?
+<|assistant|>: The vendor information displayed in the output is
+determined by the MAC address of the responding host. arp-scan
+uses a database of MAC address prefixes to determine the vendor
+information.
+27The MAC address is divided into two parts: the Organizationally
+Unique Identifier (OUI) and the device identifier. The OUI is
+assigned to the manufacturer by the IEEE and is unique to each
+manufacturer. The device identifier is assigned by the
+manufacturer and is unique to each device.
+arp-scan uses the OUI to determine the vendor information. The OUI
+is looked up in a database, which returns the vendor name and
+other information.
+The vendor information can be useful in several ways:
+- Device identification: By knowing the vendor of a device,
+you can determine the type of device and its potential
+capabilities.
+- Network mapping: By identifying the vendors of devices on
+your network, you can create a map of your network and
+identify potential vulnerabilities.
+- Security auditing: By identifying devices from specific
+vendors, you can focus your security auditing efforts on
+devices that are known to have vulnerabilities.
+You can update the vendor database used by arp-scan by running the
+get-oui command:
+get-oui
+This command downloads the latest vendor database from the IEEE and
+updates the local database used by arp-scan.
+Keep in mind that the vendor information is not always accurate, as
+devices can be configured to use custom MAC addresses or spoof
+the MAC address of another device.
+Do you have any other questions about the vendor information or how
+to use it in your network discovery efforts?
+<|end|>
+<|start|>
+<|title|>: Advanced ARP Scan Techniques
+<|system|>: You are a cybersecurity expert specializing in network
+discovery and penetration testing.
+<|user|>: I've been using arp-scan to discover hosts on my local
+network, but I'd like to know more about advanced techniques
+for using this tool. Can you explain some of the more advanced
+options and techniques?
+<|assistant|>: Certainly! arp-scan provides several advanced
+options and techniques that can be used to customize and
+enhance your network discovery efforts.
+One advanced technique is to use the --arpsha option to specify a
+custom ARP source Ethernet address. This can be useful for
+spoofing the MAC address of another device or for testing
+network devices that are configured to only respond to specific
+MAC addresses.
+For example:
+arp-scan --arpsha=DE:AD:BE:EF:CA:FE 192.168.86.0/24
+This command scans the subnet 192.168.86.0/24 using a custom ARP
+source Ethernet address DE:AD:BE:EF:CA:FE.
+28Another advanced technique is to use the --arptha option to specify
+a custom ARP target Ethernet address. This can be useful for
+testing network devices that are configured to only respond to
+specific MAC addresses.
+For example:
+arp-scan --arptha=00:11:22:33:44:55 192.168.86.0/24
+This command scans the subnet 192.168.86.0/24 using a custom ARP
+target Ethernet address 00:11:22:33:44:55.
+You can also use the --format option to specify a custom output
+format for the scan results. This can be useful for parsing the
+output and integrating it into other tools or scripts.
+For example:
+arp-scan --format='${ip}\t${mac}\t${vendor}' 192.168.86.0/24
+This command scans the subnet 192.168.86.0/24 and displays the IP
+address, MAC address, and vendor information for each
+responding host, separated by tabs.
+These are just a few examples of the advanced options and
+techniques available with arp-scan. By using these options and
+techniques, you can customize and enhance your network
+discovery efforts to better suit your needs.
+Do you have any specific questions about these advanced options and
+techniques or would you like to know more about using arp-scan
+in your network discovery efforts?
+<|end|>
+DatasetStatistics. TheaugmentedRedSageConversationcorpuscomprises266Kmulti-turndia-
+logues,totaling∼353Mtokenswithanaverageof1.3Ktokensand9.7turnsperconversation(Ta-
+ble10). Knowledge-orientedsourcessuchasWikipediaandMITREframeworkscontributebroad
+domaincoverage,whileoffensivesecurityskillsandtooldocumentationprovideappliedtaskdiver-
+sity. Figure8illustratesthesubstantialgrowthindatavolumeachievedthroughaugmentation,and
+Figure 9 highlights the distribution of augmentation types, showing the variety of transformations
+appliedtogenerateconversations.
+Figure 9: Word cloud of augmentation types
+generated by the planner agent, showing the
+diversity of conversational transformations ap-
+pliedtoRedSage-Seed.
+Figure8:Datagrowth:numberofsamplesfrom
+seedintoaugmentedconversations.
+29Table10: RedSageConversationStatisticsbyCategory: Samples,Tokens,andConversationTurns
+Configuration Samples Avg.Tokens TotalTokens MinTokens MaxTokens Avg.Turns
+Knowledge–General
+CybersecurityWikipedia 64,629 1,320.99 85,374,098 194 10,121 9.96
+CybersecurityRoadmaps 3,006 1,409.54 4,237,088 121 5,938 9.85
+Knowledge–Frameworks
+MITREATT&CK 18,479 1,277.96 23,615,397 144 4,648 9.46
+MITRECAPEC 6,859 1,194.77 8,194,954 202 3,494 9.69
+MITRECWE 13,120 1,309.32 17,178,289 161 3,806 9.18
+OWASP 1,450 1,387.83 2,012,349 223 5,663 9.48
+Skill–Offensive
+OffensiveTricks 10,670 1,411.17 15,057,221 158 32,713 9.71
+HackingArticles 11,640 1,313.84 15,293,119 221 9,505 10.94
+NullByteTutorials 10,439 1,326.56 13,847,919 233 14,902 10.11
+CTFWrite-ups 6,121 1,323.31 8,099,953 260 10,680 11.94
+Tools–CLI
+TLDRPages(English) 41,627 1,293.27 53,835,156 160 8,392 9.73
+UnixManPages 67,634 1,358.92 91,909,442 119 6,379 9.19
+Tools–Kali
+KaliDocumentation 2,902 1,311.42 3,805,736 171 3,900 9.65
+KaliTools 7,604 1,381.71 10,506,559 171 3,721 9.26
+Total(dataset) 266,180 1,326.05 352,967,280 119 32,713 9.70
+A.4 REDSAGEBENCHMARKS
+MCQBenchmarksTobuildthemultiple-choicequestion(MCQ)benchmarks,wedesignedatwo-
+steppipeline. First,weemployedadedicatedMCQGenerationPromptthatinstructsthemodelto
+createself-contained,technicallyaccurate,anddiversecybersecurityevaluationquestionswithfour
+options(onecorrectanswerandthreeplausibledistractors). Second,thegeneratedquestionswere
+verifiedusinganEvaluationDataVerifierPrompt,whichappliesarigorouschecklisttoensureself-
+containment, internalconsistency, plausibilityofdistractors, andoverallcompliancewithcyberse-
+curityrelevanceandformattingrules.Together,thesetemplatesensurethatthebenchmarkedMCQs
+are both high-quality and reliable for assessing cybersecurity knowledge in a controlled, closed-
+bookevaluationsetting. QualitativeexamplesofthebenchmarkitemsarevisualizedinFig.10,and
+theprompttemplatesusedforMCQcreationandverificationarepresentedbelow:
+CyberSkills
+CyberTools
+CyberKnowledge WhatisthepurposeofusingtheORDER
+Whatisthecommand-line
+What technique does BYclauseinSQLinjectionattacks?
+optionusedtospecifythe
+SHOTPUTusetoobscure A.ToinjectmaliciousSQLcodeintothe input dictionary file for
+itsfilesorinformation? database. genkeys?
+A.Cryptography B.Todeterminethenumberofcolumns
+B.Steganography✗ inadatabasetable.✓
+A.-f✗
+C.XORencoding✓ C.Tosorttheextracteddatainascending B.-h
+C.-n
+D.Compression ordescendingorder.✗
+D.-r✓
+D.Tocreateanewdatabasetable.
+Figure 10: Qualitative examples of RedSage MCQs. Correct answers are marked with ✓, while
+frequentincorrectmodelchoicesaremarkedwith✗.
+MCQGenerationPrompt
+You are a cybersecurity training content creator responsible for generating high-quality
+evaluation data. Your task is to create multiple-choice questions that assess cybersecu-
+rity knowledge based solely on inherent subject matter. Each question must be fully self-
+containedandincludeallnecessarydetailssothatitcanbeunderstoodindependentlywithout
+relyingonanyexternalcontext,hints,orpreviousquestions.
+30Guidelines:
+1. Self-ContainedandIndependentQuestions
+• Theoriginalseeddatawillnotbeincludedintheevaluation,soeachquestionmust
+includeallinformationrequiredforunderstandingandansweringitwithoutanyref-
+erencetoexternalcontentorotherquestions.
+• Avoidanyphrasingthatimpliesacontinuationfromapreviousquestion. Eachques-
+tionshouldbewrittenasanindependentitem.
+• Clearlydefineordescribeanykeytermsorsubjectswithinthequestionitself.
+• Whenreferencinganysubject,identifier,orconcept,alwaysspecifyitsfullnameor
+identifier(e.g.,“CWECATEGORY-10”ratherthan“categories”).
+• Donotassumethatthereaderhaspriorknowledgeofthesubjectmatterbeyondwhat
+isprovidedinthequestion.
+2. FocusonInherentandFixedDetails
+• Basequestionsoncorecybersecurityconceptssuchasdefinitions,technicalmecha-
+nisms, prerequisites, usage guidelines, mitigation strategies, consequences, classifi-
+cationprinciples,how-to,etc.
+• Avoid dynamic or subjective details that could change over time (e.g., modification
+time,versionnumbers). Focusoninherent,staticpropertiesthatremainconstant.
+3. Closed-BookEvaluation
+• Questions should assess the respondent’s existing knowledge without any hints or
+leakedcontextfromthesourcematerial.
+• Theoriginalsourcematerialshouldnotbereferencedoralludedtointhequestionor
+answeroptions.
+• Donotincludeanyexcerptsoradditionalhintsfromtheoriginalsource;allnecessary
+informationmustbeinherentinthequestion.
+4. Multiple-ChoiceFormat
+• Eachquestionmustincludeonecorrectanswerandthreeplausibledistractors.
+• Ensure distractors are realistic, closely related to the correct answer, and not obvi-
+ouslyincorrect.
+• Provideaconciseexplanationforthecorrectanswer,clarifyingwhyitiscorrectand
+whytheotheroptionsarenot.
+5. QuestionVolumeandUniqueness
+• Generateasmanyhigh-qualityquestionsasarewarrantedbythesubjectmatter.
+• Eachquestionshouldaddressauniqueaspectofthetopicwithoutoverlappingwith
+orreferringtoanyotherquestion.
+6. Formatting
+• Numbereachquestionsequentially.
+• ListansweroptionsasA,B,C,andD.
+• Clearlyindicatethecorrectanswer.
+• Provideanexplanationimmediatelyfollowingtheanswer.
+• FollowtheOutputsFormatexactly.
+OutputsFormat:
+**Question 1**
+Question text here.
+A. Option A text.
+B. Option B text.
+C. Option C text.
+D. Option D text.
+**Correct Answer**: [Correct Option]
+**Explanation**: Explanation text here.
+31...
+**Question N**
+Question text here.
+A. Option A text.
+B. Option B text.
+C. Option C text.
+D. Option D text.
+**Correct Answer**: [Correct Option]
+**Explanation**: Explanation text here.
+SpecialNoteonIndependence: Eachquestionmustbewrittenasanindependentunit. Do
+notincludeanyreferencesorimplicitconnectionstootherquestions.Ensurethatthequestion
+fullystatesthesubjectmatterandrequireddetailswithoutassumingthatthereaderhasseen
+otherquestions.
+EvaluationDataVerifierPrompt
+You are a cybersecurity evaluation data verifier. Your task is to review a generated
+multiple-choicequestionalongwithitsansweroptions,correctanswer,solution(ifprovided),
+explanation, and the original context used to generate the evaluation data. You will be pro-
+videdwithoneQnAatatime.Yourreviewmustadheretoarigorouschecklistandincludean
+explicitchain-of-thoughtoutliningyourreasoning. Usethefollowingchecklistduringyour
+evaluation:
+ChecklistforValidation:
+1. Self-Containment:
+• Thequestionmustbefullyself-contained. Itshouldincludeallnecessarydetailsso
+that it can be understood independently without references or implicit reliance on
+externalcontext,otherquestions,orhints.
+2. CompleteFormat:
+• ThequestionmustincludeexactlyfouransweroptionslabeledA,B,C,andD.
+• Thecorrectanswermustbeclearlyindicated.
+3. SingleCorrectAnswer:
+• Theremustbeonlyonecorrectanswer.
+4. PlausibleDistractors:
+• Allincorrectoptions(distractors)shouldberealisticandcloselyrelatedtothecorrect
+answer.
+5. Consistency:
+• The question text, options, correct answer, solution (if provided), and explanation
+mustbeconsistentwithoneanotherandwiththeoriginalcontext.
+6. FocusonInherentandFixedDetails:
+• Basequestionsoncorecybersecurityconceptssuchasdefinitions,technicalmecha-
+nisms, prerequisites, usage guidelines, mitigation strategies, consequences, classifi-
+cationprinciples,etc.
+• Avoid dynamic or subjective details that could change over time (e.g., the current
+statusorversionofavulnerabilityortool). Focusoninherent,staticpropertiesthat
+remainconstant.
+7. RelevanceforCybersecurityAssessment:
+• Thequestionshouldbeimportantforassessingthemodel’sknowledgeinthecyber-
+securitydomain.
+8. Formatting:
+32• Thecontentmustfollowtheexactoutputformatprovidedbelow.
+ProcessInstructions:
+• Step1:Carefullyreviewthegeneratedquestion,multiple-choiceanswers,correctanswer,
+andexplanationbyreferringtoboththeoriginalcontextandthegeneratedcontent.
+• Step2: Evaluateeachcomponentusingtheabovechecklist.
+• Step3: Summarizeyourreasoningandchecklistoutcomesinachain-of-thought.
+• Step 4: Based on your evaluation, output a single JSON object following the structure
+below:
+– "question": Theparsedquestiontext.
+– "answers": An object with keys A, B, C, and D corresponding to each answer
+option.
+– "solution": Thecorrectoptionletter(A,B,C,orD).
+– "explanation": Theexplanationtext.
+– "review_summary": Adetailedaccountofyourreasoningprocessandchecklist
+evaluation.
+– "passed":trueifthegeneratedcontentmeetsallcriteria,orfalseifitfailsany
+check.
+OutputFormatExample:
+---
+**Step1: QnA Review**
+[WRITE YOUR REVIEW FOR STEP 1]
+---
+---
+**Step2: Checklist**
+- Self-Containment: [true/false]
+- Complete Format: [true/false]
+- Single Correct Answer: [true/false]
+- Plausible Distractors: [true/false]
+- Consistency: [true/false]
+- Focus on Inherent and Fixed Details: [true/false]
+- Relevance for Cybersecurity Assessment: [true/false]
+- Formatting: [true/false]
+---
+---
+**Step3: Summary**
+[Write YOUR SUMMARY FOR STEP 3]
+---
+---
+**Step4: Final Output**
+```json
+{
+"question": "What is the primary purpose of a firewall in a
+cybersecurity context?",
+"answers": {
+"A": "To monitor user activity",
+"B": "To filter incoming and outgoing network traffic",
+"C": "To encrypt data transmissions",
+"D": "To manage passwords"
+},
+"solution": "B",
+"explanation": "The primary function of a firewall is to control
+network traffic by filtering data packets. Option A is
+incorrect because monitoring user activity is not its primary
+function; option C refers to encryption, which is handled by
+33different systems; and option D is related to account
+management rather than traffic filtering.",
+"review_summary": "Verified self-containment, complete format,
+single correct answer, plausible distractors, consistency,
+focus on inherent and fixed details, and relevance for
+cybersecurity assessment. No issues detected.",
+"passed": true
+}
+Open-ended QA Benchmarks For the open-ended QA benchmarks, we designed a pipeline that
+transformsrawseed_dataintodiverseevaluationitems. TheprocessbeginswiththeEvaluation-
+Plan Builder Prompt, which analyzes the seed data and proposes distinct evaluation types with
+correspondinginstructiontemplates, answerguidelines, andcontextexcerpts. Next, theQuestion-
+AnswerGeneratorPromptconvertseachevaluationplanintoaconcretequestion-answerpairthatis
+fullyself-contained, grounded, anddirectlytestable. WethenapplytheOpen-QAVerifierPrompt,
+whichevaluateseachgenerateditemagainstadetailedchecklistcoveringformat,clarity,grounding,
+domain meaningfulness, and overall internal consistency. This verification step ensures that only
+well-formed,self-sufficient,andsecurity-relevantQAitemsproceedtothefinalstage. Weemploy
+bothLlama-3.3-70BandQwen2.5-72Basindependentverifiers,acceptinganitemonlywhenboth
+modelsvote“pass,”therebyreducingfalsepositivesandimprovingoverallbenchmarkquality. To-
+gether, these prompt templates ensure systematic coverage of cybersecurity reasoning skills while
+avoidingrelianceonexternalormetainformation. AqualitativeexampleofourOpenQAitemsis
+showninFig.11,whiletheprompttemplatesusedforOpenQAcreationarepresentedbelow:
+CybersecurityKnowledge
+Question:WhattechniquesareusedbytheSEASHARPEEmalware?
+ReferenceAnswer:
+TheSEASHARPEEmalwareemploysseveraltechniques,including:
+1. CommandandScriptingInterpreter(T1059:003): SEASHARPEEcanexecutecommandsonvic-
+timsystemsusingaWindowsCommandShell.Thisallowsthemalwaretorunvariouscommandsand
+scriptstoperformmaliciousactivities.
+2. IndicatorRemoval(T1070:006):SEASHARPEEcantimestompfilesonvictimsystemsusingaWeb
+shell.Timestompinginvolvesalteringthetimestampsoffiles.
+3. IngressToolTransfer(T1105):SEASHARPEEcandownloadremotefilesontovictimsystems.This
+techniqueallowsthemalwaretotransferadditionaltools.
+4. ServerSoftwareComponent(T1505:003): SEASHARPEEisaWebshell, whichmeansitcanbe
+deployedonawebservertoprovideabackdoorfortheattackers.
+ThesetechniquescollectivelyenableSEASHARPEEtomaintainpersistenceandexecutecommands.
+CybersecuritySkill
+Question:Classifythetypeofcyberattackrepresentedbythiscodesnippet:
+```
+const leak = async (char) => {
+fetch ("/? try=" + char)
+let w = window.open(
+curr + char + "#" + "A". repeat(2*1024*1024 − curr.length − 2)
+)
+const check = async () => {
+try {
+w. origin
+} catch {
+fetch ("/?nope=" + char)
+return
+34}
+setTimeout(check , 100)
+}
+check()
+}
+```
+ReferenceAnswer:
+Thiscodesnippetrepresentsabrowser-specificinformationleakageattack.Theattackusesthefollowing
+techniques:
+1. URLLengthManipulation:ThecodeconstructsaURLwithaverylongfragmentidentifiertotrigger
+specificbrowserbehavior.
+2. Cross-OriginExceptionHandling: Thecodeattemptstoaccesstheoriginpropertyofthenewly
+openedwindow(w.origin).
+3. CharacterSetEnumeration:Thecodeiteratesoverapredefinedcharactersettotesteachcharacter.
+4. Timing-BasedBruteForce: ThesetTimeoutfunctionisusedtorepeatedlycheckthewindowat
+intervals.
+Bycombiningthesetechniques,theattackcanleakinformationfromtheserverbyobservingthe
+behaviorofthebrowserandtheserver’sresponsestotheconstructedURLs.
+CybersecurityTool
+Question:
+ExplainhowtousebtscannertoextractinformationfromaBluetoothdevicewithoutpairing.
+ReferenceAnswer:
+btscannerisatooldesignedtoextractasmuchinformationaspossiblefromaBluetoothdevice
+withouttheneedtopair.Here’showtouseit:
+1. Installation:
+• Installbtscannerusingthecommand:sudo apt install btscanner
+2. BasicUsage:
+• Runthetool:btscanner
+• Displayhelp:btscanner -help
+3. Options:
+• -no-reset:PreventstheBluetoothadapterfrombeingresetbeforescanning.
+• -cfg=<file>:Specifiesaconfigurationfile.
+4. InteractingwiththeTool:
+• Oncerunning,scrollthroughthelistoffounddevices.
+• PressEntertoprobeadevice(RSSI,linkquality).
+• UseqtoquitthescreenandQtoquittheapplication.
+5. SavedData:
+• Deviceinfoisstoredin~/bts/<BDADDR>/info.
+• Timestampsaresavedin~/bts/<BDADDR>/timestamps.
+Byfollowingthesesteps,youcaneffectivelyusebtscannertogatherdetailedinformationabout
+Bluetoothdeviceswithoutpairing.
+Figure 11: Qualitative examples of RedSage open-ended Q&A. Each benchmark item includes a
+questionanditsreferenceanswerderivedfromtheseeddata.
+Evaluation-PlanBuilderPrompt
+YouaretheEvaluation-PlanBuilderforanOpen-QAcybersecuritybenchmark.
+Goal
+• Analyse the provided seed_data and propose every realistic way an LLM could be
+testedonit.
+35• Foreachproposedtest,outputahigh-qualityready-to-useinstructiontemplate.
+• Ifthetestrequiresapassage,alsoextractaverbatimcontextexcerpt.
+Input
+• seed_data: passages, logs, configs, code, write-ups, documentations, frameworks, or
+othercybersecurityartefacts.
+(Noexternalsourcesallowed.)
+Reference list (examples, not exhaustive): Fact Recall · Threat/TTP Classification · Log
+Anomaly Detection · Exploit Plan Synthesis · Next Step Suggestion · Command-Line Con-
+struction·Command-LineAnalysis·LogAnalysis·VulnerabilityIdentification·SecureCon-
+figuration Check · Patch/Mitigation Recommendation · Tool Output Interpretation · Threat-
+IntelSummarisation·AttackChainMapping·ProcedureSynthesis·Red-TeamReportDraft-
+ing·IOCExtraction·PayloadDe-obfuscation·CVEPrioritisation·MisconfigurationRea-
+soning·OSINTInference·Social-EngineeringDetection
+Feelfreetoinventadditionaltypesthatbetterfitthedataaslongastheyaremeaningfulfor
+cybersecurityassessment.
+Rules
+1. Useonlyinformationthatappearsinseed_data;inventnothing.
+2. Thinkstep-by-step,thenoutputthefinalJSONattheend.
+3. Proposedistinctevaluationtypes.
+4. Foreachtypereturnthesefieldsinthisexactorder:
+• evaluation_name(<=5words)
+• purpose(onesentence)
+• instruction_template(userprompt)-Ifthetestneedsapassage,includethe
+placeholder
+<CONTEXT>
+wrappedintripleback-ticks. -Otherwiseomittheplaceholderentirely.
+• answer_guideline(whatconstitutesacorrectanswer)
+• context_excerpt(verbatimtext<=2048tokensfromseed_data,preserving
+linebreaks)-Requiredonlywhentheplaceholderappears;otherwiseusetheempty
+string"".
+5. Avoidquestionsaboutreferences,authorship,versionhistory,orothermetadatathatmay
+changeovertime.
+6. Ensuretheinstruction_templateandanswer_guidelinearefullygrounded
+intheseed_data. Donothallucinate.
+7. Sinceseed_dataarenotgivenduringevaluation,theinstruction_templateand
+answer_guidelinemustbeself-contained. Ifcontextisneeded,usetheplaceholder
+<CONTEXT>andprovidethecontextaccordingly.
+8. Ifnocontextisneeded,omittheplaceholderandsetcontext_excerptto"".
+9. Avoidphrasinglike“basedontheseeddata”or“asmentionedintheseeddata.”
+10. Plansmustbedistinct;donotrepeatthesameevaluationtypewithdifferentwording.Ifno
+meaningfulgroundedevaluationexists,outputanemptylist[]forevaluation_plan.
+11. Strictlyfollowtheoutputformatexactlyasspecifiedbelow.
+OutputFormat:
+## Content Analysis and Evaluation Plan
+< Your analysis of the seed_data goes here >
+## Final Evaluation Plan
+36```json
+{
+"evaluation_plan": [
+{
+"evaluation_name": "<name requiring context>",
+"purpose": "<single-sentence purpose>",
+"instruction_template": "<prompt with \n```\n<CONTEXT>\n```\n
+placeholder>",
+"answer_guideline": "<criteria for correctness, depth, and
+helpfulness>",
+"context_excerpt": "<verbatim excerpt pulled from seed_data>"
+},
+{
+"evaluation_name": "<name without context>",
+"purpose": "<single-sentence purpose>",
+"instruction_template": "<self-contained prompt with no
+placeholder>",
+"answer_guideline": "<criteria for correctness, depth, and
+helpfulness>",
+"context_excerpt": ""
+}
+]
+}
+```
+Question-AnswerGeneratorPrompt
+YouaretheQuestion-AnswerGeneratorforanOpen-QAbenchmark.
+Given:
+• evaluation_planJSONwith:
+– evaluation_name
+– purpose
+– instruction_template(mayinclude<CONTEXT>placeholder)
+– answer_guideline
+– context_excerpt(verbatimtext<2048tokens,or""ifnoneneeded)
+• seed_data: thefullsourcetextfromwhichanyexcerptwasdrawn.
+YourJob:
+Produce one high-quality QA item (one question, one reference answer) that tests the
+intendedcapabilityintheevaluationplan. TheQAmustbeself-containedandgroundedonly
+intheprovidedmaterials.
+OUTPUTOVERVIEW
+Wheninformationissufficientyoumustproduce,inthisorder:
+1. Analysissection(brief).
+2. SufficientInformationflag.
+3. FinalOpenQAsection(EvaluationName,Question,ReferenceAnswer).
+Ifinformationisinsufficient,seetheInsufficientInformationsectionbelow.
+QUESTIONCONSTRUCTION
+1. Startfromevaluation_plan.instruction_template. Rewriteforclarityand
+naturalflow.
+2. If the template contains <CONTEXT>, replace it with the literal contents of
+context_excerpt,wrappedintriplebackticks. Preservelinebreaks.
+373. If context_excerpt is empty, write a fully self-contained question. Do not imply
+hiddenorexternaltext.
+4. Includeonlytheminimumcontextrequiredtotestthetargetedskill. Avoidleakinglarge
+amountsofseed_data.
+5. Ensurequestionandreferenceanswertogethertesttheintentexpressedinpurposeand
+aregradableunderanswer_guideline.
+6. The QA must be fully self-sufficient. The tested model and grader will not see
+seed_data.
+NOMETAREFERENCES(critical)
+Theuser-facingquestionmustNOTmention: document,source,seeddata,excerpt,dataset,
+benchmark, grader, rubric, evaluation_plan, or similar meta terms. Rewrite meta phrasing
+intodirectinstructions.
+Examples:
+• Template: “Refertotheexcerpttoidentifythevulnerability.” Rewrite: “Identifythevul-
+nerabilityinthecodebelow.”
+• Template: “Usingtheprovidedseeddata,explain...” Rewrite: “Explain...”
+REFERENCEANSWERQUALITYREQUIREMENTS
+• Must fully satisfy answer_guideline and demonstrate appropriate reasoning and
+depth.
+• Mustbegroundedonlyincontext_excerptandbroaderseed_data;noinvention
+orexternalfacts.
+• Provideasmuchdetailasneeded(unlessexplicitlyconstrained).
+• Reproduceliteralphrasesexactlywhenrequired.
+• Includeeveryelementrequiredbyanswer_guideline.
+• Ifmultipleacceptablevariantsexist,listthemclearly.
+INSUFFICIENTINFORMATION
+If evaluation_plan + seed_data do not provide enough to produce a correct,
+groundedanswer:
+OutputONLY:
+### Sufficient Information for Grounded OpenQA: False
+<short explanation of what is missing>
+DonotoutputtheFinalOpenQAsection.
+REQUIREDRESPONSELAYOUT(whensufficient):
+---
+### Analysis and Thinking
+[Brief notes: how you interpreted purpose, rewrite decisions,
+grounding sufficiency, and how the answer meets the guideline.]
+### Sufficient Information for Grounded OpenQA:
+True
+### Final OpenQA:
+#### Evaluation Name:
+<copy evaluation_name>
+#### Question:
+<final user-facing question - no meta references>
+#### Reference Answer:
+<grounded, guideline-compliant answer>
+38Open-QAVerifierPrompt
+YouaretheOpen-QAVerifierforabenchmarkthatevaluatesquestion-answerpairsintended
+totestlargelanguagemodelsinthecybersecuritydomain.
+Inputs
+• question: thefinaluser-facingprompt.
+• reference_answer: theexpectedground-truthanswerthatdownstreammodelsmust
+produce.
+• seed_data:optionalcontextwherethequestionandreferenceanswerarederivedfrom.
+Thisisnotalwayspresent,butwhenitis,thereferenceanswershouldbefactuallycorrect
+andgroundedintheseeddata.
+Goal
+ApplythechecklistbelowtorigorouslyevaluatethisQApair. Foreachcheckpoint:
+• Thinkstepbystep,explicitlywritingoutyourreasoning(chainofthought).
+• ThendecideTrueifthepairpassesthatcriterion,otherwiseFalse.
+Checklist
+1. Format&Parsing
+• Nomissingtext,strayMarkdownmarkers,orJSONartefacts.
+• Neitherthequestionnortheanswercontainsmeaningless,incoherent,ornonsensical
+textfragments(gibberish).
+2. Self-SufficiencyofQuestion
+• Thequestionstandsalone;itdoesnotdependonunseencontextordata.
+• Anyexcerptordataitneedsisincludedinthequestion(e.g. inacodeblock).
+• Theevaluatedmodelcanansweritfullywithouthiddenadditionalcontext.
+3. Clarity&CompletenessofQuestion
+• Clearlywordedandunambiguous.
+• Containsalltheinformationneededtoproducetheexpectedanswer.
+4. MeaningfulnessfortheDomain
+• Thequestiontestsameaningfulconcept,procedure,skill,reasoningstep,orknowl-
+edgerelevanttothebenchmark’sdomain(notgenerictrivia).
+5. AlignmentwithExpectedAnswerType
+• Thequestionobviouslyrequeststhetypeofanswerprovided(list,explanation,step-
+by-step,command,shortsnippet,etc.).
+6. NoUnjustifiedAssumptions
+• The reference answer does not rely on facts, hidden artifacts, or conclusions not
+presentinthequestion’stextorgenerallystabledomainknowledge.
+7. ReferenceAnswerQuality
+• Fullysatisfieswhatthequestionrequires,withnoskippedkeypoints.
+• Avoidsinventedorexternallyhallucinatedcontent.
+8. Consistency&Accuracy
+• Nocontradictionsbetweenquestionandanswer.
+• Technicalorfactualdetailsareinternallyconsistent.
+9. Language&Readability
+• Clear,professionalEnglishwithnoprofanityorirrelevantcomments.
+10. NoRedundancy
+• Thequestionisfocusedandnotunnecessarilyrepeatedorbroad.
+11. NoAnswerOverleakage
+39• Thequestiondoesnotsimplygiveawaythesolutionorembedthereferenceanswer
+insidetheprompt.
+12. FactuallyCorrectandFullyGrounded(ifseed_dataispresent)
+• The reference answer must be factually correct and grounded in the provided seed
+datatoavoidhallucinationsorinaccuracies.
+FinalDecisionLogic
+• IfallcheckpointsareTrue,thenverdict="PASS".
+• IfanycheckpointisFalse,thenverdict="FAIL"andyoumustbrieflyexplainwhyfor
+eachfailedcheckpoint.
+• AlsoprovideafinalOpenQAQualityScorefrom0to10,where:
+– 10=outstandingbenchmarkitem,exceptionallywell-constructed,highlychallenging
+andclear
+– 5=average,acceptablebutcouldbeimproved
+– 0=entirelyunsuitable(incoherent,trivial,off-topic,orotherwisebroken)
+OutputFormat:
+Checklist Results
+1. Format & Parsing:
+- Reasoning: <Your thought for this point>
+- Result: True / False
+2. Self-Sufficiency of Question:
+- Reasoning: <Your thought for this point>
+- Result: True / False
+...
+12. Factually Correct and Fully Grounded (if seed_data is present):
+- Reasoning: <Your thought for this point>
+- Result: True / False
+Verdict:
+PASS / FAIL
+Issues:
+- <short explanation for each failed checkpoint>
+(If the verdict is PASS, write `Issues:\nNone.`)
+OpenQA Quality Score: <integer from 0 to 10>
+B TRAINING DETAILS
+Our training pipeline uses the open-source Axolotl framework (Axolotl maintainers and contribu-
+tors, 2023) for Continued Pretraining (CPT), Supervised Finetuning (SFT), and Direct Preference
+Optimization (DPO). Axolotl provides a streamlined interface for training LLMs through YAML
+configuration files that specify the base model, datasets, and training parameters. This design fa-
+cilitatesreproducibility,asexperimentscanbereplicatedsimplybysharingandrunningthecorre-
+spondingconfigurationfile.
+B.1 PRE-TRAININGDETAILS
+Our RedSage continued pretraining (CPT) followed a staged curriculum. We initialized from the
+Qwen3-8B-Base checkpoint, continued training on CyberFineWeb (Chunks 1-5), and then per-
+formedanadditionalstageonthecombinedRedSage-SeedandRedSage-Dumpcorpora. Thispro-
+40gressionfirstreinforcedbroadgeneral-domaincoveragefromCyberFineWebbeforeincorporating
+high-quality,domain-specificcybersecurityknowledge.
+Weconductedtrainingon8nodes,eachequippedwith4×64GBNVIDIAA100GPUs. Weuseda
+micro-batchsizeof32perGPU,yieldinganeffectiveglobalbatchsizeof1024.
+AnexampleAxolotlconfigurationfileusedforpretrainingeachdatachunkisshownbelow:
+RedSagePretrainingConfig
+base_model: Qwen/Qwen3-8B-Base # or replace with last pretraining
+checkpoint
+bf16: true
+datasets:
+- path: [REPLACE-WITH-EXPECTED-PRETRAINING-DATASET]
+type: completion
+deepspeed: deepspeed_configs/zero3_bf16.json
+eval_steps: 3800
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+learning_rate: 2.5e-06
+load_in_8bit: false
+log_with:
+- wandb
+- tensorboard
+lr_scheduler: constant_with_warmup # or constant for next-checkpoint
+micro_batch_size: 32
+max_grad_norm: 1.0
+num_epochs: 1
+optimizer: adamw_torch
+output_dir: [REPLACE-WITH-MODEL-OUTPUT-PATH]
+save_strategy: epoch
+saves_per_epoch: 1
+seed: 2442
+sequence_length: 32768
+sequence_parallel: true
+torch_compile: false
+trust_remote_code: true
+use_tensorboard: true
+val_set_size: 0.01
+warmup_steps: 1000 # or remove for next-checkpoint
+B.2 POST-TRAININGDETAILS
+FollowingtheCPTphase,weperformedpost-trainingintwostages. First,weconductedsupervised
+finetuning(SFT)usingouraugmentedRedSage-Convdatasettogetherwithgeneralinstructiondata
+fromthenon-reasoningsubsetofSmolTalk25. Thisstageallowedthemodeltospecializeincyber-
+securityconversationswhileretaininggeneralinstruction-followingcapabilities.
+Second,weappliedpreferencealignmentviaDirectPreferenceOptimization(DPO)usingtheopen-
+sourceTulu38BPreferenceMixturedataset(Lambertetal.,2025). Thisalignmentphaserefined
+themodel’sresponsestobetterreflecthuman-preferredoutputs.
+TheAxolotlconfigurationforthepost-trainingstagesisshownbelow:
+5GeneralSFTdatasets:HuggingFaceTB/smoltalk2
+41RedSageSupervised-FinetuningConfig
+base_model: [REPLACE-WITH-REDSAGE-BASE-MODEL]
+trust_remote_code: true
+auto_resume_from_checkpoints: true
+bf16: true
+deepspeed: deepspeed_configs/zero3_bf16.json
+gradient_checkpointing: true
+sequence_parallel: true
+micro_batch_size: 32
+gradient_accumulation_steps: 1
+num_epochs: 2
+sequence_length: 32768
+optimizer: adamw_torch
+lr_scheduler: cosine
+learning_rate: 2.5e-5
+weight_decay: 0.05
+warmup_ratio: 0.01
+cosine_min_lr_ratio: 0.01
+chat_template: jinja
+chat_template_jinja: [REPLACE-WITH-OUR-CUSTOM-CHAT-TEMPLATE]
+datasets:
+# Conversation Datasets
+- path: [REPLACE-WITH-REDSAGE-CONVERSATION-DATA]
+type: chat_template
+name: all
+field_messages: conversations
+message_property_mappings:
+role: from
+content: value
+- path: [REPLACE-WITH-SMOLTALK2-NON-THINKING]
+type: chat_template
+name: formatted
+field_messages: messages
+message_property_mappings:
+role: from
+content: value
+output_dir: [REPLACE-WITH-MODEL-OUTPUT-PATH]
+save_steps: 0.25
+eval_steps: 0.25
+val_set_size: 0.01
+log_with:
+- wandb
+- tensorboard
+use_tensorboard: true
+save_total_limit: 5
+load_in_8bit: false
+torch_compile: false
+special_tokens:
+eos_token: <|im_end|>
+pad_token: <|endoftext|>
+42B.3 ESTIMATEDTRAININGTIMEANDCOMPUTATIONALCOSTANALYSIS
+ContinuedpretrainingfromQwen3-8B-BaseontheCyberFineWeb(CFW)datasetwasexecutedin
+24-hourmaximum-runtimechunks,withanaverageof20effectivetraininghoursperchunk. Five
+suchchunksrequiredapproximately100hourstoproducetheRedSage-8B-CFWcheckpoint. Ad-
+ditionalcontinuedpretrainingonRedSage-SeedandRedSage-Dumptookroughly10hours,yield-
+ing RedSage-8B-Base. Supervised fine-tuning on RedSage-Conv and general instruction datasets
+(SmolTalk2) required about 16 hours for two epochs, and DPO alignment using 8×A100 GPUs
+addedanother8hours. Intotal, thefulltrainingpipelineconsumedapproximately134wall-clock
+hours (∼5.5 days), corresponding to more than 4,000 GPU-hours. A detailed breakdown of each
+stage is provided in Table 11. Variations may arise from distributed-training overheads, including
+communicationlatencyandcheckpointrestarts.
+Table11: EstimatedtrainingtimeandcomputationalcostfortheRedSage-8Bpipeline.
+Stage OutputCheckpoint Time(h) GPU-hours(approx.)
+ContinuedPretraining(CPT),1epoch,32×A100
+CPT:CyberFineWeb RedSage-8B-CFW ∼100 ∼3,200
+CPT:RedSage-Seed&-Dump RedSage-8B-Base ∼10 ∼320
+Post-training(SFT:2epochs,32×A100;DPO:1epoch,8×A100)
+SFT:RedSage-Conv&SmolTalk2 RedSage-8B-Ins ∼16 ∼512
+DPO:TuluPreferenceMixture RedSage-8B-DPO ∼8 ∼64
+Totalpipeline RedSage-8B-DPO ∼134(∼5.5days) ∼4,096
+C EVALUATION DETAILS
+For replicable evaluation, we implement and evaluate RedSage-Bench and prior cybersecurity
+benchmarksinHuggingFacelighteval(Habibetal.,2023). Thedetailcomparedmodel, task,
+andmetricsforeachevaluationisdescribedinthenextsubsection.
+C.1 EVALUATIONSETUP
+Compared methods. We benchmark RedSage against open general-purpose and cybersecurity-
+focused LLMs, summarized in Tab. 12. The general baselines are Llama-3.1-8B and Qwen3-8B;
+the specialized baselines are Llama-Primus (Base and Merged), Foundation-Sec (Base and In-
+struct),Lily-Cybersecurity-7B-v0.2,andDeepHat-V1-7B.Foreachmodelthetablereportsparam-
+etercount,backbone,andtheHuggingFacecardusedtoobtainconfigurationsandweights,which
+supports strict reproducibility. Base models are evaluated in plain completion mode, instruction-
+tuned models use their official prompt templates, and Qwen3 is run in non-reasoning mode for
+parity. The suite spans 7-8B parameters across Llama, Qwen, and Mistral backbones, enabling a
+balancedcomparisonbycapacityandtrainingstyle.
+43Table12: EvaluatedbaselinemodelsandtheirHuggingFacecards.
+Model Params(B) Basemodel HuggingFace
+Llama-3.1-8B 8 N/A(base) meta-llama/Llama-3
+.1-8B
+Qwen3-8B 8 Qwen3-8B-Base Qwen/Qwen3-8B
+Llama-Primus-Base 8 Llama-3.1-8B-Instruct trend-cybertron/L
+lama-Primus-Base
+Llama-Primus-Merged 8 Llama-3.1-8B(mergedwith trendmicro-ailab/L
+Llama-3.1-8B-Instruct) lama-Primus-Merged
+Foundation-Sec-8B 8 Llama-3.1-8B fdtn-ai/Foundation
+-Sec-8B
+Foundation-Sec-8B-Instruct 8. Foundation-Sec-8B fdtn-ai/Foundation
+(Llama-3.1-8Bbackbone) -Sec-8B-Instruct
+Lily-Cybersecurity-7B-v0.2 7 Mistral-7B-Instruct-v0.2 segolilylabs/Lil
+y-Cybersecurity-7
+B-v0.2
+DeepHat-V1-7B 7 Qwen2.5-Coder-7B DeepHat/DeepHat-V
+1-7B
+C.2 REDSAGEBENCHMARKS
+MCQ Evaluation Protocols. Models are prompted to select a single option letter (A-D) given a
+questionanditschoices. Wecomputethelogprobabilitiesoftheoptiontokensforthenext-token
+prediction and take the highest-probability option as the model’s answer. This approach avoids
+parsing errors and ensures the model outputs only the option letter. The MCQ prompt template is
+shownbelow.
+RedSageMCQPromptTemplate
+You are given multiple choice questions. Answer with the option
+letter (A, B, C, D) from the given choices directly.
+Question: {question}
+A. {option[0]}
+B. {option[1]}
+C. {option[2]}
+D. {option[3]}
+Answer:
+Open-endedQ&AEvaluationProtocols.WeadoptanLLM-as-Judgerubricthatassessesbothfac-
+tual correctness (True/False) and answer quality (0-10), considering helpfulness, relevance, depth,
+andlevelofdetail. AlljudgmentsareproducedusingLlama-3.3-70Bastheevaluator. Thesystem
+promptandtemplatefortherubricareprovidedbelow.
+RedSageOpen-endedQ&ALLM-as-JudgeSystemPrompt
+You are the Judge for an Open-QA cybersecurity benchmark.
+## Inputs
+- question: the final user-facing prompt
+- reference_answer: the ground-truth answer
+- model_answer: the response produced by the evaluated model
+## Goal
+Evaluate model_answer on two aspects:
+(1) factual correctness, and
+44(2) overall answer quality (0-10).
+---
+## Checklist
+1) Correctness
+- Is the answer factually accurate?
+- Does it align with the reference_answer and grounded
+cybersecurity knowledge?
+- Any hallucinations, contradictions, or false claims?
+Output rule for correctness:
+- True if correct and grounded
+- False if factually incorrect, hallucinated, contradicted, or
+clearly wrong
+2) Answer Quality Score (0-10)
+Rate overall quality only if at least partially correct:
+- Helpfulness (does it answer the question?)
+- Relevance (focused and on-topic)
+- Depth (reasoning or understanding)
+- Level of detail (complete and specific enough)
+Scoring guide:
+- 10: perfect - accurate, complete, deep, fully relevant
+- 8-9: strong - minor omissions or small inaccuracies
+- 6-7: moderate - useful but lacking depth or detail
+- 4-5: weak - vague, shallow, or incomplete
+- 1-3: poor - limited usefulness or clarity
+- 0: invalid or gibberish
+---
+## Instructions
+- Use chain-of-thought privately, but present only a final analysis
+in <analysis>.
+- Be strict on correctness: any factual error -> correctness=False.
+If correctness=False, cap score at 3 or lower.
+- If correct but shallow, keep correctness=True and assign a lower
+score.
+---
+## Output Format
+Return exactly these three blocks in order. Do not add text outside
+the tags.
+<analysis>
+Free-form justification. You may write anything here such as
+step-by-step reasoning, comparisons, errors spotted, strengths,
+weaknesses, etc. between the model_answer and reference_answe.
+Make sure your analysis is detailed and covers all aspects of the
+evaluation checklist.
+### Correctness
+Analysis and justification for the correctness evaluation.
+### Answer Quality Score
+Analysis and justification for the answer quality score.
+#### Helpfulness
+45Justification for the helpfulness aspect.
+#### Relevance
+Justification for the relevance aspect.
+#### Depth
+Justification for the depth aspect.
+#### Level of Detail
+Justification for the level of detail aspect.
+</analysis>
+<correctness>
+True or False
+</correctness>
+<score>
+0-10 (integer only)
+</score>
+RedSageOpen-endedQ&ALLMasJudgePromptTemplate
+[System Prompt]
+Question:
+```
+{question}
+```
+Reference Answer:
+```
+{reference_answer}
+```
+Model Answer:
+```
+{model_answer}
+```
+QualitativeResultsofRedSageOpenQA.WepresentthreeRedSageOpenQAexamplesthatspan
+cybersecurityframeworks,offensiveskills,andtoolusage.IntheOlympicDestroyerattributioncase
+showninFig.12,RedSage8BDPOcorrectlyidentifiestheSandwormteam,whilebaselinemodels
+misattribute the malware to other Russian APT groups. For the CSP bypass example in Fig. 13
+and the Koadic tool-usage example in Fig. 14, RedSage 8B DPO accurately recognizes iframe-
+based CSP evasion and generates the exact Koadic command line. In contrast, the baselines omit
+keydetailsorproducemalformedcommands. ThesecasesillustratethatRedSageexhibitsstronger
+groundinginauthoritativecybersecuritysourcesandimprovedprecisioninoperationalreasoning.
+QualitativeResultsofLLM-as-Judge. TofurtherillustratethedifferencescapturedbyourLLM-
+as-Judge pipeline, we include qualitative evaluations comparing RedSage with the baseline model
+using the tool-based question shown in Fig. 14. As shown in Fig. 15, the judge marks RedSage’s
+answer as fully correct, assigns a perfect score, and highlights the precise command construction
+and clear supporting explanations. In contrast, the baseline model receives a failing correctness
+labelandasubstantiallylowerscorebecauseitusesanincorrectcommand-lineflag,eventhoughits
+surroundingexplanationisdetailed. Thesepairedresultsemphasizethesensitivityofourevaluation
+frameworktofine-grainedcorrectness,particularlyincybersecurityscenarioswheresmallsyntactic
+deviationscanleadtoincorrectorunsafetoolbehavior.
+46Figure 12: Knowledge framework example from RedSage OpenQA. For the Olympic Destroyer
+question,RedSage8BDPOmatchesthereferenceattributiontotheSandwormteam,whilebaseline
+modelsmisattributeittodifferentAPTgroups. BestviewedinZoom.
+Figure 13: Offensive skill example analyzing JavaScript that bypasses Content Security Policy.
+RedSage 8B DPO correctly identifies iframe injection as the evasion technique and explains how
+eachstepcircumventstheconfiguredscript-srcdirective. BestviewedinZoom.
+RedSage: LLM-as-JudgeOutput
+<analysis>
+The model answer provided is not only factually correct but also
+offers additional helpful information and context. It accurately
+constructs the command line to start Koadic with the specified
+autorun file and restore option. The command line provided in the
+model answer matches the reference answer exactly, which is
+`koadic --autorun autorun_commands.txt --restore
+restore_data.json`. This indicates that the model has correctly
+understood the requirements and has provided the precise command
+needed to achieve the desired outcome.
+### Correctness
+The model answer is correct because it accurately reflects the
+command line needed to start Koadic with the specified parameters.
+There are no factual errors, hallucinations, or contradictions in
+the provided command line. The additional information about the
+command assuming `koadic` is in the system's PATH and the
+explanation of the flags (`--autorun` and `--restore`) are accurate
+and useful but do not affect the correctness of the command itself.
+47Figure 14: Tool-usage example for the Koadic framework. RedSage 8B DPO provides the exact
+command,whilethebaselinemodelproducesanon-matchingcommand. BestviewedinZoom.
+### Answer Quality Score
+The answer quality score should be high because the model answer
+is not only correct but also provides additional useful
+information that could help a user understand how to use the
+command and troubleshoot potential issues (like the executable not
+being in the PATH).
+#### Helpfulness
+The model answer is very helpful because it directly answers the
+question with the correct command line and provides supplementary
+information that could aid in successfully executing the command.
+#### Relevance
+The answer is highly relevant as it directly addresses the
+question asked without including unnecessary information. The
+command line and the explanations provided are focused on the task
+of starting Koadic with an autorun file and enabling the restore
+option.
+#### Depth
+The answer shows a good depth of understanding of the command and
+its parameters. It not only provides the command but also explains
+the purpose of the flags used, which indicates a level of
+comprehension beyond mere recall of command syntax.
+#### Level of Detail
+The level of detail is appropriate for the question asked. The
+model provides enough detail for someone to understand how to use
+the command and what each part of the command does, without
+overwhelming them with unnecessary information.
+</analysis>
+<correctness>
+True
+</correctness>
+<score>
+10
+</score>
+48BaselineModel: LLM-as-JudgeOutput
+<analysis>
+The model answer provides a detailed explanation of how to start
+Koadic with an autorun file and enable the restore option. It
+breaks down the command into its components and explains the
+purpose of each part. However, the command provided in the model
+answer is slightly different from the reference answer. The model
+answer uses the short option `-a` for autorun, whereas the
+reference answer uses the long option `--autorun`.
+### Correctness
+The model answer is almost correct, but it uses a different option
+for specifying the autorun file. The correct option, as per the
+reference answer, is `--autorun`, not `-a`. This discrepancy makes
+the model answer factually incorrect.
+### Answer Quality Score
+Despite the factual error, the model answer provides a clear and
+detailed explanation of the command and its components. It also
+includes important notes about the ethical use of Koadic and the
+importance of proper permissions and access.
+#### Helpfulness
+The model answer is helpful in explaining the purpose of each part
+of the command and providing context for its use.
+#### Relevance
+The model answer is highly relevant to the question, as it
+directly addresses the task of starting Koadic with an autorun
+file and enabling the restore option.
+#### Depth
+The model answer provides a good depth of explanation, breaking
+down the command into its components and explaining the purpose of
+each part.
+#### Level of Detail
+The model answer provides a sufficient level of detail, including
+explanations of the command options and important notes about
+ethical use and permissions.
+</analysis>
+<correctness>
+False
+</correctness>
+<score>
+3
+</score>
+Figure15: QualitativeLLM-as-JudgeoutputscomparingRedSageandthebaselinemodel.
+49C.3 CYBERSECURITYBENCHMARKS
+CyberMetric (CyMtc). CyberMetric evaluates general cybersecurity knowledge via multiple-
+choice questions with four options, curated from authoritative sources such as NIST publications,
+RFCs, books, andresearchpapersusingaretrieval-augmentedgenerationpipeline. Thecollection
+isreleasedinseveralsizes,andweusethe500-itemsplitthatwasfullyverifiedbyhumanexperts.
+Items span nine topical areas that include cryptography, reverse engineering, and risk assessment.
+ModelsarescoredwithstandardMCQaccuracy. (Tihanyietal.,2024)
+SecBench (ScBen). SecBench is a large multi-dimensional benchmark for cybersecurity that in-
+cludes both MCQs and short-answer questions, covers two capability levels (knowledge retention
+andlogicalreasoning),andisavailableinChineseandEnglish. Questionsweresourcedfromopen
+materialsandacuratedcontest,andshort-answerevaluationissupportedbyanLLM-basedgrader.
+InourstudyweusetheEnglishMCQsubsetandreportaccuracy. (Jingetal.,2025)
+MMLU Computer Security (MMLU-CSec). MMLU is a 57-subject multiple-choice test that
+measures broad academic and professional knowledge. We evaluate on the Computer Security
+subject, which contains MCQs covering practical and theoretical topics such as network security
+and cryptography. Following common practice for MMLU-style evaluation, we report accuracy.
+(Hendrycksetal.,2021)
+SECURE. SECURE targets applied cybersecurity with datasets built from MITRE ATT&CK,
+CWE, CVE, and related ICS advisories, organized into three knowledge types: extraction, under-
+standing, and reasoning. We use the MCQ-style subsets MAET (MITRE ATT&CK Extraction),
+CWET (Common Weakness Extraction), and KCV (Knowledge test on Common Vulnerabilities).
+Theauthorsmanuallyrefinedthepoolsbyremovingorfixingflawedquestions. Weevaluatewith
+MCQaccuracy. (Bhusaletal.,2024)
+CTI-Bench. CTI-Benchfocusesoncyberthreatintelligenceandprovidesfourtasks: CTI-MCQ
+forknowledgeofCTIstandardsandpractices; CTI-RCMformappingCVEdescriptionstooneor
+moreCWErootcauses;CTI-VSPforpredictingCVSSv3basevectorsandscores;andCTI-ATEfor
+extractingMITREATT&CKattacktechniquesfromnaturallanguageincidentdescriptions. While
+VSPandATEaretypicallyevaluatedwithregressionandF1metrics,respectively,inourstudywe
+onlyuseaccuracyacrossallsubsetsforconsistentaggregation. (Alametal.,2024)
+SecEval (ScEva). SecEval is a domain-focused benchmark of more than two thousand MCQs
+spanningnineareasthatincludesoftware,application,system,web,cryptography,memorysafety,
+networksecurity,andpenetrationtesting. Questionswereconstructedfromtextbooks,officialdocu-
+mentation,andstandardsusingGPT-4prompting,withqualitycontroltoremoveinvaliditems. We
+evaluatewithMCQaccuracyonthefullset. (Lietal.,2023)
+C.4 GENERALLLMBENCHMARKS
+ARC-Challenge (ARC-C). ARC-C is the challenge split of the AI2 Reasoning Challenge, a set
+ofgrade-schoolsciencemultiple-choicequestionscuratedtorequirenontrivialreasoningandback-
+groundknowledge. Thechallengesubsetspecificallycontainsitemsthatdefeatsimpleretrievaland
+co-occurrence baselines, making it a strong discriminator of reasoning beyond surface cues. We
+evaluatewithstandardMCQaccuracyasusedbyleaderboardimplementations. (Clarketal.,2018)
+HellaSwag (HSwag). HellaSwag tests grounded commonsense inference via sentence comple-
+tion. Eachexamplepresentsashortcontextandfourcandidateendingsthatdescribeplausiblenext
+eventsinphysicalorsocialscenarios. Thedatasetwasadversariallyfilteredtofoilstronglanguage
+modelswhileremainingtrivialforhumans,whichsharpensitsdiscriminativepower. Performance
+isreportedasmultiple-choiceaccuracy. (Zellersetal.,2019)
+TruthfulQA(TQA). TruthfulQAmeasureswhethermodelsavoidwidespreadmisconceptionsand
+misleadingpatternsbyansweringwithfactuallytruthfulcontentacross38categoriessuchashealth,
+law, and finance. It provides both generative prompts and multiple-choice variants. Following
+common leaderboard practice, we use the multiple-choice setting and report accuracy to ensure
+comparabilityacrossmodels. (Linetal.,2022)
+MMLU. MMLUevaluatesbroadknowledgeandreasoningacross57academicandprofessional
+subjectsthatrangefromelementarymathematicsandU.S.historytocomputerscienceandlaw.Each
+50subjectconsistsoffour-optionmultiple-choiceitemsdesignedtotestrecall,conceptualunderstand-
+ing, andproblemsolving. Scoresareaggregatedasaverageaccuracyacrosssubjects. (Hendrycks
+etal.,2021)
+WinoGrande(WinoG). WinoGrandeisalargeadversarialvariantoftheWinogradSchemaChal-
+lenge that assesses commonsense reasoning through pronoun resolution. Each example requires
+selecting which of two candidate nouns a pronoun refers to, with items constructed to reduce an-
+notation artifacts and shallow heuristics. Evaluation follows leaderboard protocol using accuracy.
+(Sakaguchietal.,2021)
+GSM8K. GSM8K is a collection of 8.5K carefully authored grade-school math word problems
+that require multi-step arithmetic reasoning. Problems are linguistically diverse and designed to
+encourage chain-of-thought solutions, yet the final target is a short numeric answer. We report
+exact-matchaccuracyonthefinalanswer,consistentwithleaderboardsettings. (Cobbeetal.,2021)
+IFEval. IFEval evaluates instruction following using prompts that contain verifiable constraints
+suchasminimumlength,requiredkeywords,orstructuralrequirements. Eachpromptincludesone
+ormoreconstraintsthatcanbeprogrammaticallychecked,yieldingobjectivepass/failsignalswith-
+outhumangrading. Wereportthemeancompliancerateacrossallconstraints,i.e.,thepercentage
+ofconstraintssatisfied. (Zhouetal.,2023)
+D ADDITIONAL EVALUATION RESULTS
+D.1 LARGERMODELSCALING
+To assess the scalability of our data curation and augmentation pipeline, we conducted a reduced-
+scope experiment using Qwen3-32B. We applied QLoRA fine-tuning (≈1% trainable parameters)
+onapartialdatasetconsistingofthecuratedRedSage-Seedsubset(excludingRedSage-Dump)and
+50% of RedSage-Conv. Despite using only a fraction of the full training data and a lightweight
+adaptation method, the resulting 32B model achieved consistent gains across both the RedSage-
+MCQbenchmark(Table13)andasuiteofcybersecurityevaluations(Table14).Notably,thetraining
+losscontinuedtodecreasethroughouttherun, suggestingthatfull-data, full-parameterfine-tuning
+wouldyieldevenlargerimprovements. ThesefindingsindicatethattheRedSagedatacurationand
+augmentation methodology transfers effectively to larger models, underscoring its scalability and
+potentialtoadvancecybersecurityLLMdevelopment.
+Table13: RedSage-MCQ(0-shot)scalingexperiment. Valuesareaccuracy(%). Abb: Gen=Gen-
+eral,Frm=Frameworks,Off=OffensiveSkills,CLI=Command-lineTools,Kali=KaliTools.
+ModelName Macro Knowledge Skill Tools
+Acc Gen Frm Off CLI Kali
+Qwen3-8B 81.85 80.46 78.82 86.16 83.92 75.56
+Qwen3-32B 85.40 84.08 82.32 89.00 87.60 80.40
+RedSage-8B-Ins 85.73 84.20 84.98 89.06 86.80 80.30
+RedSage-32B-LoRA-Ins-0.5 87.53 85.68 85.04 91.46 88.76 82.78
+Table14:RelatedCybersecurityBenchmarks(0-shot)scalingexperiment.ValuesareAccuracy(%).
+Bestresultsareshowninbold.
+CTI-Bench CyMtc MMLU ScBen ScEva SECURE
+ModelName Mean
+MCQ RCM 500 CSec En MCQ CWET KCV MEAT
+Qwen3-8B 75.71 62.76 54.00 88.60 76.00 73.26 65.46 88.11 87.42 85.75
+Qwen3-32B 82.31 70.04 65.60 91.80 84.00 84.23 76.23 89.46 88.72 90.06
+RedSage-8B-Ins 81.30 70.56 76.70 89.80 78.00 79.91 72.48 91.45 81.34 91.47
+RedSage-32B-LoRA-Ins-0.5 82.85 71.64 66.10 93.40 84.00 83.77 78.30 92.18 83.29 92.97
+51
