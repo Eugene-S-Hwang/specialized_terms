@@ -21,6 +21,7 @@ from google.cloud import storage
 # from dotenv import load_dotenv
 import pandas as pd
 import os
+import fitz
 
 
 #### NOT USING SUPABASE CURRENTLY (CSV IS FASTER)
@@ -48,6 +49,7 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
 
         blob_id = blob.name.split('/')[-1][:-6]
         category = find_category_csv(blob_id)
+        # print(f"DEBUG: Destination Argument: {destination_file_name}")
 
         # print(blob_id)
 
@@ -57,12 +59,30 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
         else:
             dir_path = os.path.join(destination_file_name, category)
         
-        final_path = os.path.join(dir_path, f"{blob_id}.pdf")
+        # final_path = os.path.join(dir_path, f"{blob_id}.pdf")
+        # file_dir = os.path.dirname(final_path)
+
+        # os.makedirs(file_dir, exist_ok=True)
+
+        # blob.download_to_filename(final_path)
+            
+        final_path = os.path.join(dir_path, f"{blob_id}.txt")
         file_dir = os.path.dirname(final_path)
 
         os.makedirs(file_dir, exist_ok=True)
 
-        blob.download_to_filename(final_path)
+        pdf_bytes = blob.download_as_bytes()
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        text = ""
+        for page in doc:
+            text += page.get_text("text")  
+        
+        with open(final_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        
+        doc.close()
 
         print(f"Blob {blob.name} downloaded to {final_path}.")
 
@@ -93,7 +113,7 @@ def read_paper(file_name):
         text = page.extract_text()
         print(text)
 
-download_papers("arxiv-dataset", "arxiv/arxiv/pdf/2601/", "/data/user_data/ehwang2/papers")
+download_papers("arxiv-dataset", "arxiv/arxiv/pdf/2510/", "test_download_papers")
 
 # def find_category_supabase(id):
 #     try:
@@ -109,3 +129,5 @@ download_papers("arxiv-dataset", "arxiv/arxiv/pdf/2601/", "/data/user_data/ehwan
 #         print("SOME ISSUE")
 
 # print("Testing")
+
+# read_paper("2601.22155v1.pdf")
