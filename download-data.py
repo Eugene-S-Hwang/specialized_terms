@@ -1,17 +1,8 @@
 """
-Instructions to use Amazon S3 Buckets (if needed):
-1) Access Amazon S3 Buckets
-2) Download files from the buckets
-
-NOTE: Must pay to download the data
-"""
-
-
-"""
 Instructions:
 1) Use Gcloud to download paper (free)
-2) Use pypdf to get the text from the pdf file 
-3) Use the arxiv API to get the category of the paper (date of paper can be identified through paper's id)
+2) Use pymupdf to get the text from the pdf file 
+3) Use the id_to_category.csv file to get the category of the paper (date of paper can be identified through paper's id)
 """
 import urllib.request as libreq
 import feedparser
@@ -32,7 +23,9 @@ import fitz
 
 # supabase = create_client(url, key)
 
-df = pd.read_csv("id_to_category.csv")
+#####
+
+df = pd.read_csv("id_to_category.csv", dtype={"paper_id":str, "category":str})
 category_dict = dict(zip(df['paper_id'], df['category']))
 
 def download_papers(bucket_name, source_blob_name, destination_file_name):
@@ -41,50 +34,49 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
 
     blobs = bucket.list_blobs(prefix=source_blob_name, match_glob="**.pdf")
 
-    test = 0
+    blobs_dict = {}
     for blob in blobs:
-        if(test > 5):
-            break
-        test += 1
+        try:
+            blob_name = blob.name.split('/')[-1] 
+            blob_id = blob_name.split('v')[0]
 
-        blob_id = blob.name.split('/')[-1][:-6]
-        category = find_category_csv(blob_id)
-        # print(f"DEBUG: Destination Argument: {destination_file_name}")
+            blobs_dict[blob_id] = blob
+        except Exception as e:
+            print(f"Skipping adding file due to error {e}")
+    
+    for (blob_id, blob) in blobs_dict.items():
+        try:
+            category = find_category_csv(blob_id)
 
-        # print(blob_id)
+            if('.' in category):
+                main_cat, sub_cat = category.split('.')
+                dir_path = os.path.join(destination_file_name, f"{main_cat}/{sub_cat}")
+            else:
+                dir_path = os.path.join(destination_file_name, category)
+                
+            final_path = os.path.join(dir_path, f"{blob_id}.txt")
+            file_dir = os.path.dirname(final_path)
 
-        if('.' in category):
-            main_cat, sub_cat = category.split('.')
-            dir_path = os.path.join(destination_file_name, f"{main_cat}/{sub_cat}")
-        else:
-            dir_path = os.path.join(destination_file_name, category)
-        
-        # final_path = os.path.join(dir_path, f"{blob_id}.pdf")
-        # file_dir = os.path.dirname(final_path)
+            os.makedirs(file_dir, exist_ok=True)
 
-        # os.makedirs(file_dir, exist_ok=True)
+            pdf_bytes = blob.download_as_bytes()
 
-        # blob.download_to_filename(final_path)
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+            text = ""
+            for page in doc:
+                text += page.get_text()  
             
-        final_path = os.path.join(dir_path, f"{blob_id}.txt")
-        file_dir = os.path.dirname(final_path)
+            with open(final_path, "w", encoding="utf-8") as f:
+                f.write(text)
+            
+            doc.close()
 
-        os.makedirs(file_dir, exist_ok=True)
-
-        pdf_bytes = blob.download_as_bytes()
-
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-
-        text = ""
-        for page in doc:
-            text += page.get_text("text")  
+            print(f"Blob {blob.name} downloaded to {final_path}.")
         
-        with open(final_path, "w", encoding="utf-8") as f:
-            f.write(text)
-        
-        doc.close()
+        except Exception as e:
+            print(f"Skipping downloading file due to error {e}")
 
-        print(f"Blob {blob.name} downloaded to {final_path}.")
 
 ## Slow?
 def find_category_arXiv_API(id):
@@ -99,9 +91,6 @@ def find_category_arXiv_API(id):
 
     print(parse.entries[0]["arxiv_primary_category"]["term"])
 
-    # with libreq.urlopen('http://export.arxiv.org/api/query?search_query=all:neutron&start=0&max_results=1') as url:
-    #   r = url.read()
-    # print(r)
 
 def find_category_csv(id):
     return category_dict.get(id)
@@ -113,7 +102,11 @@ def read_paper(file_name):
         text = page.extract_text()
         print(text)
 
-download_papers("arxiv-dataset", "arxiv/arxiv/pdf/2510/", "test_download_papers")
+months = ['01', '02', '03', '04', '01', '06', '07', '08', '09', '10', '11', '12']
+for m in months:
+    download_papers("arxiv-dataset", f"arxiv/arxiv/pdf/17{m}/", "/data/datasets/arXiv")
+# download_papers("arxiv-dataset", f'arxiv/arxiv/pdf/1701/', "test_download_papers")
+
 
 # def find_category_supabase(id):
 #     try:
