@@ -8,25 +8,16 @@ import urllib.request as libreq
 import feedparser
 from pypdf import PdfReader
 from google.cloud import storage
-# from supabase import create_client, Client
-# from dotenv import load_dotenv
 import pandas as pd
 import os
 import fitz
 
 
-#### NOT USING SUPABASE CURRENTLY (CSV IS FASTER)
-# load_dotenv()
+new_subject_dict = {
+    "acc-phys" : "physics.acc-ph"
+}
 
-# url = os.environ.get("SUPABASE_URL")
-# key = os.environ.get("SUPABASE_KEY")
-
-# supabase = create_client(url, key)
-
-#####
-
-df = pd.read_csv("id_to_category.csv", dtype={"paper_id":str, "category":str})
-category_dict = dict(zip(df['paper_id'], df['category']))
+subject = "acc-phys"
 
 def download_papers(bucket_name, source_blob_name, destination_file_name):
     storage_client = storage.Client(project="changeling-lab")
@@ -46,7 +37,7 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
     
     for (blob_id, blob) in blobs_dict.items():
         try:
-            category = find_category_csv(blob_id)
+            category = new_subject_dict[subject]
 
             if('.' in category):
                 main_cat, sub_cat = category.split('.')
@@ -78,49 +69,4 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
             print(f"Skipping downloading file due to error {e}")
 
 
-## Slow?
-def find_category_arXiv_API(id):
-
-    url = f'http://export.arxiv.org/api/query?search_query=all:{id}&start=0&max_results=1'
-
-    # print(url)
-    with libreq.urlopen(url) as text:
-        data = text.read()
-
-    parse = feedparser.parse(data)
-
-    print(parse.entries[0]["arxiv_primary_category"]["term"])
-
-
-def find_category_csv(id):
-    return category_dict.get(id)
-
-def read_paper(file_name):
-    reader = PdfReader(f"test_download_papers/{file_name}")
-
-    for page in reader.pages:
-        text = page.extract_text()
-        print(text)
-
-months = ['01', '02', '03', '04', '01', '06', '07', '08', '09', '10', '11', '12']
-for m in months:
-    download_papers("arxiv-dataset", f"arxiv/arxiv/pdf/20{m}/", "/data/datasets/arXiv")
-# download_papers("arxiv-dataset", f'arxiv/arxiv/pdf/1701/', "test_download_papers")
-
-
-# def find_category_supabase(id):
-#     try:
-#         response = (
-#             supabase.table("CategoryFinder")
-#             .select("category")
-#             .eq("paper_id", id)
-#             .execute()
-#         )
-        
-#         return response.data[0]['category']
-#     except:
-#         print("SOME ISSUE")
-
-# print("Testing")
-
-# read_paper("2601.22155v1.pdf")
+download_papers("arxiv-dataset", f"arxiv/{subject}/pdf/", "test_download_papers")
