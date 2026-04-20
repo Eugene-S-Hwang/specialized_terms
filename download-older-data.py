@@ -12,12 +12,26 @@ import pandas as pd
 import os
 import fitz
 
+df = pd.read_csv("id_to_category.csv", dtype={"paper_id":str, "category":str})
+category_dict = dict(zip(df['paper_id'], df['category']))
 
 new_subject_dict = {
-    "acc-phys" : "physics.acc-ph"
+    "acc-phys" : "physics.acc-ph",
+    "adap-org" : "nlin.AO",
+    "alg-geom" : "math.AG",
+    "ao-sci" : "physics.ao-ph",
+    "astro-ph" : "astro-ph",
+    "atom-ph" : "physics.atom-ph",
+    "bayes-an" : 'physics.data-an',
+    "chao-dyn" : "nlin.CD",
+    "chem-ph" : 'physics.chem-ph',
+    "cmp-lg" : 'cs.CL',
+    "comp-gas" : "nlin.CG",
+    "dg-ga" : "math.DG",
+    "funct-an" : "math.FA",
 }
 
-subject = "acc-phys"
+subject = "hep-ex"
 
 def download_papers(bucket_name, source_blob_name, destination_file_name):
     storage_client = storage.Client(project="changeling-lab")
@@ -37,7 +51,7 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
     
     for (blob_id, blob) in blobs_dict.items():
         try:
-            category = new_subject_dict[subject]
+            category = find_category_csv(blob_id)
 
             if('.' in category):
                 main_cat, sub_cat = category.split('.')
@@ -45,7 +59,7 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
             else:
                 dir_path = os.path.join(destination_file_name, category)
                 
-            final_path = os.path.join(dir_path, f"{blob_id}.txt")
+            final_path = os.path.join(dir_path, f"{blob_id}-{subject}.txt")
             file_dir = os.path.dirname(final_path)
 
             os.makedirs(file_dir, exist_ok=True)
@@ -68,5 +82,9 @@ def download_papers(bucket_name, source_blob_name, destination_file_name):
         except Exception as e:
             print(f"Skipping downloading file due to error {e}")
 
+def find_category_csv(id):
+    if(subject not in new_subject_dict):
+        return category_dict.get(f"{subject}/{id}")
+    return new_subject_dict[subject]
 
-download_papers("arxiv-dataset", f"arxiv/{subject}/pdf/", "test_download_papers")
+download_papers("arxiv-dataset", f"arxiv/{subject}/pdf/", "/data/datasets/arXiv")
