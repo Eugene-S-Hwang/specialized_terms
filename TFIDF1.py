@@ -1,8 +1,8 @@
 import os
 import re
-import sys
 import math
-import argparse
+import numpy as np
+from rank_bm25 import BM25Okapi
 from collections import Counter
 import streamlit as st
 
@@ -19,13 +19,17 @@ STOP_WORDS = {
 }
 
 labels = {
-    "A": "2007-2013",
-    "B": "2014-2020",
+    "A": "1993-1999",
+    "B": "2000-2006",
+    "C": "2007-2013",
+    "D": "2014-2020",
 }
 
 text_windows = {
     "A": {},
-    "B": {}
+    "B": {},
+    "C": {},
+    "D": {},
 }
 
 def extract_year(filename: str):
@@ -39,46 +43,80 @@ def tokenize(text: str) -> list[str]:
 
 def build_corpus(folder: str):
     """
-    Read all .txt files, assign to period A or B (or both if year == 2011).
-    Returns:
-        docs  - {"A": combined_text, "B": combined_text}
-        skipped - list of filenames that had no recognisable year
+    Read all .txt files, assign to one of four periods based on two-digit year prefix.
+      A: 93-99  (1993-1999)
+      B: 00-06  (2000-2006)
+      C: 07-13  (2007-2013)
+      D: 14-20  (2014-2020)
+    Returns (via yield):
+        progress strings, then a final dict with docs and skipped
     """
-    docs: dict[str, list[str]] = {"A": [], "B": []}
+    docs: dict[str, list[str]] = {"A": [], "B": [], "C": [], "D": []}
     skipped: list[str] = []
     prev_year = None
+
+    def year_to_period(year: str):
+        """Return which period key(s) a two-digit year belongs to."""
+        y = int(year)
+        # Files from 1993-1999 have prefix 93-99
+        # Files from 2000-2020 have prefix 00-20
+        if (93 <= y <= 99):
+            return "A"
+        elif 0 <= y <= 6:
+            return "B"
+        elif 7 <= y <= 13:
+            return "C"
+        elif 14 <= y <= 20:
+            return "D"
+
+    def display_year(year: str) -> str:
+        y = int(year)
+        return f"19{year}" if y >= 93 else f"20{year:0>2}"
 
     for fname in sorted(os.listdir(folder)):
         if not fname.lower().endswith(".txt"):
             continue
         year = extract_year(fname)
-        # print(fname)
-        if year is None or int(year) < 7 or int(year) > 20:
+        if year is None:
+            skipped.append(fname)
+            continue
+
+        try:
+            y = int(year)
+        except ValueError:
+            skipped.append(fname)
+            continue
+
+        # Valid range: 97-99 (1997-1999) or 00-20 (2000-2020)
+        # if not ((97 <= y <= 99) or (0 <= y <= 20)):
+        #     skipped.append(fname)
+        #     continue
+
+        period = year_to_period(year)
+        if not period:
             skipped.append(fname)
             continue
 
         path = os.path.join(folder, fname)
         with open(path, "r", encoding="utf-8", errors="replace") as fh:
             text = fh.read()
-        
-        if(prev_year is not None and year != prev_year):
-            yield f"Finished processing year 20{prev_year}"
-        
-        prev_year = year
 
-        if "07" <= year <= "13":
-            docs["A"].append(text)
-        if "14" <= year <= "20":
-            docs["B"].append(text)
+        if prev_year is not None and year != prev_year:
+            yield f"Finished processing year {display_year(prev_year)}"
+
+        prev_year = year
+        
+        docs[period].append(text)
+
     if prev_year is not None:
-        yield f"Finished processing year 20{prev_year}"
+        yield f"Finished processing year {display_year(prev_year)}"
 
     for k, texts in docs.items():
         for text in texts:
             tokens = re.findall(r"[a-zA-Z]+", text.lower())
             for i, t in enumerate(tokens):
                 if t not in STOP_WORDS and len(t) > 2:
-                    window = " ".join(tokens[max(0, i-5) : i+6])
+                    window = " ".join(tokens[max(0, i - 5) : i + 6])
                     text_windows[k].setdefault(t, []).append(window)
 
     yield {"docs": {k: " ".join(v) for k, v in docs.items()}, "skipped": skipped}
@@ -93,9 +131,7 @@ def tf(tokens: list[str]) -> dict[str, float]:
     return {word: count / total for word, count in counts.items()}
 
 
-def tfidf_scores(
-    docs: dict[str, str]
-) -> dict[str, dict[str, float]]:
+def tfidf_scores(docs: dict[str, str]) -> dict[str, dict[str, float]]:
     """
     Compute TF-IDF for each document.
     IDF = log( (1 + N) / (1 + df) ) + 1   [sklearn-style smooth IDF]
@@ -103,7 +139,7 @@ def tfidf_scores(
     tokenized = {k: tokenize(v) for k, v in docs.items()}
     N = len(tokenized)
 
-    print(N)
+    # print(N)
 
     # document frequency
     df: Counter = Counter()
@@ -121,14 +157,36 @@ def tfidf_scores(
 
     return scores
 
+# ── BM-25 ───────────────────────────────────────────────────────────────────
+
+def bm_25_scores(docs: dict[str, str]) -> dict[str, dict[str, float]]:
+    tokenized = {k: tokenize(v) for k, v in docs.items()}
+    N = len(tokenized)
+
+    # print(N)
+    bm25 = BM25Okapi(list(tokenized.values()))
+    labels = list(tokenized.keys())
+
+    vocab = set(word for doc in tokenized.values() for word in doc)
+
+    scores: dict[str, dict[str, float]] = {}
+
+    for term in vocab:
+        term_scores = bm25.get_scores([term])
+        for idx, val in enumerate(term_scores):
+            scores[labels[idx]][term] = val
+    
+    return scores
+
+
 # ── Helper: find candidate folders ───────────────────────────────────────────
- 
+
+#Not currently used
 def find_folders_with_txt(root: str, max_depth: int = 3) -> list[str]:
     """Walk up to max_depth levels and return folders that contain .txt files."""
     results = []
     root = os.path.abspath(root)
     for dirpath, dirnames, filenames in os.walk(root):
-        # Limit depth
         depth = dirpath[len(root):].count(os.sep)
         if depth >= max_depth:
             dirnames.clear()
@@ -136,51 +194,30 @@ def find_folders_with_txt(root: str, max_depth: int = 3) -> list[str]:
         if any(f.lower().endswith(".txt") for f in filenames):
             results.append(dirpath)
     return sorted(results)
- 
+
+
 # ── UI ────────────────────────────────────────────────────────────────────────
- 
+
+st.set_page_config(layout="wide")
 st.title("📊 TF-IDF Explorer")
-st.caption("Compare word importance across two time periods (2007–2013 vs 2014–2020)")
- 
+st.caption("Compare word importance across four time periods (1993-1999 · 2000-2006 · 2007-2013 · 2014-2020)")
+
 st.divider()
- 
+
 # --- Folder selection ---
 st.subheader("1. Select a folder")
- 
-col1, col2 = st.columns([3, 1])
- 
-with col1:
-    scan_root = st.text_input(
-        "Root directory to scan for folders containing .txt files",
-        value=os.getcwd(),
-        placeholder="/path/to/your/data",
-    )
- 
-with col2:
-    st.write("")
-    st.write("")
-    scan_btn = st.button("🔍 Scan", width="stretch")
- 
-# Find folders
+
 if "folder_list" not in st.session_state:
-    st.session_state.folder_list = []
- 
-if scan_btn:
-    if os.path.isdir(scan_root):
-        with st.spinner("Scanning for folders with .txt files..."):
-            st.session_state.folder_list = find_folders_with_txt(scan_root)
-        if not st.session_state.folder_list:
-            st.warning("No folders with .txt files found under that path.")
-    else:
-        st.error(f"'{scan_root}' is not a valid directory.")
- 
+    st.session_state.folder_list = ['/data/datasets/arXiv', '/data/datasets/arXiv/astro-ph', '/data/datasets/arXiv/astro-ph/CO', '/data/datasets/arXiv/astro-ph/EP', '/data/datasets/arXiv/astro-ph/GA', '/data/datasets/arXiv/astro-ph/HE', '/data/datasets/arXiv/astro-ph/IM', '/data/datasets/arXiv/astro-ph/SR', '/data/datasets/arXiv/cond-mat', '/data/datasets/arXiv/cond-mat/dis-nn', '/data/datasets/arXiv/cond-mat/mes-hall', '/data/datasets/arXiv/cond-mat/mtrl-sci', '/data/datasets/arXiv/cond-mat/other', '/data/datasets/arXiv/cond-mat/quant-gas', '/data/datasets/arXiv/cond-mat/soft', '/data/datasets/arXiv/cond-mat/stat-mech', '/data/datasets/arXiv/cond-mat/str-el', '/data/datasets/arXiv/cond-mat/supr-con', '/data/datasets/arXiv/cs/AI', '/data/datasets/arXiv/cs/AR', '/data/datasets/arXiv/cs/CC', '/data/datasets/arXiv/cs/CE', '/data/datasets/arXiv/cs/CG', '/data/datasets/arXiv/cs/CL', '/data/datasets/arXiv/cs/CR', '/data/datasets/arXiv/cs/CV', '/data/datasets/arXiv/cs/CY', '/data/datasets/arXiv/cs/DB', '/data/datasets/arXiv/cs/DC', '/data/datasets/arXiv/cs/DL', '/data/datasets/arXiv/cs/DM', '/data/datasets/arXiv/cs/DS', '/data/datasets/arXiv/cs/ET', '/data/datasets/arXiv/cs/FL', '/data/datasets/arXiv/cs/GL', '/data/datasets/arXiv/cs/GR', '/data/datasets/arXiv/cs/GT', '/data/datasets/arXiv/cs/HC', '/data/datasets/arXiv/cs/IR', '/data/datasets/arXiv/cs/IT', '/data/datasets/arXiv/cs/LG', '/data/datasets/arXiv/cs/LO', '/data/datasets/arXiv/cs/MA', '/data/datasets/arXiv/cs/MM', '/data/datasets/arXiv/cs/MS', '/data/datasets/arXiv/cs/NA', '/data/datasets/arXiv/cs/NE', '/data/datasets/arXiv/cs/NI', '/data/datasets/arXiv/cs/OH', '/data/datasets/arXiv/cs/OS', '/data/datasets/arXiv/cs/PF', '/data/datasets/arXiv/cs/PL', '/data/datasets/arXiv/cs/RO', '/data/datasets/arXiv/cs/SC', '/data/datasets/arXiv/cs/SD', '/data/datasets/arXiv/cs/SE', '/data/datasets/arXiv/cs/SI', '/data/datasets/arXiv/cs/SY', '/data/datasets/arXiv/econ/EM', '/data/datasets/arXiv/econ/GN', '/data/datasets/arXiv/econ/TH', '/data/datasets/arXiv/eess/AS', '/data/datasets/arXiv/eess/IV', '/data/datasets/arXiv/eess/SP', '/data/datasets/arXiv/eess/SY', '/data/datasets/arXiv/gr-qc', '/data/datasets/arXiv/hep-ex', '/data/datasets/arXiv/hep-lat', '/data/datasets/arXiv/hep-ph', '/data/datasets/arXiv/hep-th', '/data/datasets/arXiv/math-ph', '/data/datasets/arXiv/math/AC', '/data/datasets/arXiv/math/AG', '/data/datasets/arXiv/math/AP', '/data/datasets/arXiv/math/AT', '/data/datasets/arXiv/math/CA', '/data/datasets/arXiv/math/CO', '/data/datasets/arXiv/math/CT', '/data/datasets/arXiv/math/CV', '/data/datasets/arXiv/math/DG', '/data/datasets/arXiv/math/DS', '/data/datasets/arXiv/math/FA', '/data/datasets/arXiv/math/GM', '/data/datasets/arXiv/math/GN', '/data/datasets/arXiv/math/GR', '/data/datasets/arXiv/math/GT', '/data/datasets/arXiv/math/HO', '/data/datasets/arXiv/math/KT', '/data/datasets/arXiv/math/LO', '/data/datasets/arXiv/math/MG', '/data/datasets/arXiv/math/NA', '/data/datasets/arXiv/math/NT', '/data/datasets/arXiv/math/OA', '/data/datasets/arXiv/math/OC', '/data/datasets/arXiv/math/PR', '/data/datasets/arXiv/math/QA', '/data/datasets/arXiv/math/RA', '/data/datasets/arXiv/math/RT', '/data/datasets/arXiv/math/SG', '/data/datasets/arXiv/math/SP', '/data/datasets/arXiv/math/ST', '/data/datasets/arXiv/nlin/AO', '/data/datasets/arXiv/nlin/CD', '/data/datasets/arXiv/nlin/CG', '/data/datasets/arXiv/nlin/PS', '/data/datasets/arXiv/nlin/SI', '/data/datasets/arXiv/nucl-ex', '/data/datasets/arXiv/nucl-th', '/data/datasets/arXiv/physics/acc-ph', '/data/datasets/arXiv/physics/ao-ph', '/data/datasets/arXiv/physics/app-ph', '/data/datasets/arXiv/physics/atm-clus', '/data/datasets/arXiv/physics/atom-ph', '/data/datasets/arXiv/physics/bio-ph', '/data/datasets/arXiv/physics/chem-ph', '/data/datasets/arXiv/physics/class-ph', '/data/datasets/arXiv/physics/comp-ph', '/data/datasets/arXiv/physics/data-an', '/data/datasets/arXiv/physics/ed-ph', '/data/datasets/arXiv/physics/flu-dyn', '/data/datasets/arXiv/physics/gen-ph', '/data/datasets/arXiv/physics/geo-ph', '/data/datasets/arXiv/physics/hist-ph', '/data/datasets/arXiv/physics/ins-det', '/data/datasets/arXiv/physics/med-ph', '/data/datasets/arXiv/physics/optics', '/data/datasets/arXiv/physics/plasm-ph', '/data/datasets/arXiv/physics/pop-ph', '/data/datasets/arXiv/physics/soc-ph', '/data/datasets/arXiv/physics/space-ph', '/data/datasets/arXiv/q-bio/BM', '/data/datasets/arXiv/q-bio/CB', '/data/datasets/arXiv/q-bio/GN', '/data/datasets/arXiv/q-bio/MN', '/data/datasets/arXiv/q-bio/NC', '/data/datasets/arXiv/q-bio/OT', '/data/datasets/arXiv/q-bio/PE', '/data/datasets/arXiv/q-bio/QM', '/data/datasets/arXiv/q-bio/SC', '/data/datasets/arXiv/q-bio/TO', '/data/datasets/arXiv/q-fin/CP', '/data/datasets/arXiv/q-fin/EC', '/data/datasets/arXiv/q-fin/GN', '/data/datasets/arXiv/q-fin/MF', '/data/datasets/arXiv/q-fin/PM', '/data/datasets/arXiv/q-fin/PR', '/data/datasets/arXiv/q-fin/RM', '/data/datasets/arXiv/q-fin/ST', '/data/datasets/arXiv/q-fin/TR', '/data/datasets/arXiv/quant-ph', '/data/datasets/arXiv/stat/AP', '/data/datasets/arXiv/stat/CO', '/data/datasets/arXiv/stat/ME', '/data/datasets/arXiv/stat/ML', '/data/datasets/arXiv/stat/OT']
+
 # Subfolder dropdown
+root = "/data/datasets/arXiv"
 selected_folder = None
 if st.session_state.folder_list:
     selected_folder = st.selectbox(
         "Choose a folder",
         options=st.session_state.folder_list,
-        format_func=lambda p: f"📁 {os.path.relpath(p, scan_root)}",
+        format_func=lambda p: f"📁 {os.path.relpath(p, root)}",
     )
 else:
     manual = st.text_input(
@@ -189,77 +226,92 @@ else:
     )
     if manual:
         selected_folder = manual
- 
+
+corpus_btn = st.button("Select Folder", width="content")
+docs, skipped = None, []
+if corpus_btn:
+    for k in text_windows:
+        text_windows[k].clear()
+
+    st.write("**📅 Processing folder:**")
+    log_container = st.empty()
+    log_lines: list[str] = []
+
+    for item in build_corpus(selected_folder):
+        if isinstance(item, str):
+            log_lines.append(item)
+            log_container.markdown("\n".join(log_lines))
+        else:
+            docs = item["docs"]
+            skipped = item["skipped"]
+
+    if skipped:
+        st.info(
+            f"Skipped {len(skipped)} file(s) with unrecognised year prefix: "
+            + ", ".join(skipped[:10])
+            + (" …" if len(skipped) > 10 else "")
+        )
+
 # Settings
 st.subheader("2. Settings")
- 
+
 top_n = st.slider("Number of top words to show", min_value=5, max_value=50, value=15, step=5)
- 
+
 # Run the TFIDF stuff
 st.subheader("3. Run analysis")
- 
-run_btn = st.button("▶ Run TF-IDF", type="primary", width="content")
- 
-if run_btn:
+
+tfidf_btn = st.button("▶ Run TF-IDF", type="primary", width="content")
+bm25_btn = st.button("▶ Run BM-25", type="primary", width="content") 
+
+if tfidf_btn:
     if not selected_folder or not os.path.isdir(selected_folder):
         st.error("Please select a valid folder first.")
     else:
-        st.write("**📅 Processing log:**")
-        log_container = st.empty()
-        log_lines: list[str] = []
-        docs, skipped = None, []
- 
-        for item in build_corpus(selected_folder):
-            if isinstance(item, str):
-                log_lines.append(item)
-                log_container.markdown("\n".join(log_lines))
-            else:
-                docs = item["docs"]
-                skipped = item["skipped"]
- 
-        if skipped:
-            st.info(f"Skipped {len(skipped)} file(s) with unrecognised year prefix: {', '.join(skipped[:10])}" +
-                    (" …" if len(skipped) > 10 else ""))
- 
-        if not docs["A"] and not docs["B"]:
-            st.error("No matching files found. Make sure filenames start with a two-digit year (e.g. 07, 14).")
+        # Reset text_windows for a fresh run
+
+        if not any(docs[k] for k in labels):
+            st.error(
+                "No matching files found. Make sure filenames start with a two-digit year "
+                "(e.g. 97, 03, 09, 15)."
+            )
         else:
             scores = tfidf_scores(docs)
- 
+
             st.divider()
             st.subheader("Results")
- 
-            # Token counts
-            meta_cols = st.columns(2)
+
+            # Token counts — one metric per period
+            meta_cols = st.columns(4)
             for i, (key, period) in enumerate(labels.items()):
                 count = len(tokenize(docs[key])) if docs[key] else 0
-                meta_cols[i].metric(label=f"Period {key} ({period}) — tokens", value=f"{count:,}")
- 
+                meta_cols[i].metric(
+                    label=f"Period {key} ({period})",
+                    value=f"{count:,} words",
+                )
+
             st.write("")
- 
-            # Side-by-side results
-            res_cols = st.columns(2)
+
+            # Side-by-side results — 4 columns
+            res_cols = st.columns(4)
             for i, (key, period) in enumerate(labels.items()):
                 with res_cols[i]:
                     st.markdown(f"#### Period {key} &nbsp; `{period}`")
                     if not scores.get(key):
                         st.warning("No documents found for this period.")
                         continue
- 
+
                     top_words = sorted(
                         scores[key].items(), key=lambda x: x[1], reverse=True
                     )[:top_n]
- 
-                    # Display as a styled table
+
                     rows = []
                     for rank, (word, score) in enumerate(top_words, 1):
-                        bar_pct = int((score / top_words[0][1]) * 100)
                         rows.append({
                             "Rank": rank,
                             "Word": word,
                             "TF-IDF Score": round(score, 6),
                         })
- 
+
                     st.dataframe(
                         rows,
                         width="stretch",
@@ -274,17 +326,19 @@ if run_btn:
                             ),
                         },
                     )
-                    
+
                     st.markdown("##### Context Windows (top 10 per word)")
                     for word, _ in top_words:
                         word_windows = text_windows.get(key, {}).get(word, [])[:10]
                         if not word_windows:
                             continue
-                        with st.expander(f"**{word}** — {len(text_windows.get(key, {}).get(word, []))} occurrences"):
+                        with st.expander(
+                            f"**{word}** — {len(text_windows.get(key, {}).get(word, []))} occurrences"
+                        ):
                             ctx_rows = [{"#": i + 1, "Context": w} for i, w in enumerate(word_windows)]
                             st.dataframe(
                                 ctx_rows,
-                                width='stretch',
+                                width="stretch",
                                 hide_index=True,
                                 column_config={
                                     "#": st.column_config.NumberColumn(width="small"),
@@ -292,61 +346,85 @@ if run_btn:
                                 },
                             )
 
-# # ── main ─────────────────────────────────────────────────────────────────────
+if bm25_btn:
+    if not selected_folder or not os.path.isdir(selected_folder):
+        st.error("Please select a valid folder first.")
+    else:
+        # Reset text_windows for a fresh run
 
-# """
-# How to run:
+        if not any(docs[k] for k in labels):
+            st.error(
+                "No matching files found. Make sure filenames start with a two-digit year "
+                "(e.g. 97, 03, 09, 15)."
+            )
+        else:
+            scores = bm_25_scores(docs)
 
-# Input this command in the terminal: python TFIDF.py [folder] --top [number]
-# """
+            st.divider()
+            st.subheader("Results")
 
+            # Token counts — one metric per period
+            meta_cols = st.columns(4)
+            for i, (key, period) in enumerate(labels.items()):
+                count = len(tokenize(docs[key])) if docs[key] else 0
+                meta_cols[i].metric(
+                    label=f"Period {key} ({period})",
+                    value=f"{count:,} words",
+                )
 
+            st.write("")
 
-# def main():
-#     parser = argparse.ArgumentParser(description="TF-IDF by time period.")
-#     parser.add_argument("folder", help="Path to folder containing .txt files")
-#     parser.add_argument(
-#         "--top", type=int, default=15, help="Number of top words to show (default 15)"
-#     )
-#     args = parser.parse_args()
+            # Side-by-side results — 4 columns
+            res_cols = st.columns(4)
+            for i, (key, period) in enumerate(labels.items()):
+                with res_cols[i]:
+                    st.markdown(f"#### Period {key} &nbsp; `{period}`")
+                    if not scores.get(key):
+                        st.warning("No documents found for this period.")
+                        continue
 
-#     folder = args.folder
-#     if not os.path.isdir(folder):
-#         sys.exit(f"Error: '{folder}' is not a valid directory.")
+                    top_words = sorted(
+                        scores[key].items(), key=lambda x: x[1], reverse=True
+                    )[:top_n]
 
-#     print(f"\nScanning folder: {os.path.abspath(folder)}\n")
-#     docs, skipped = build_corpus(folder)
+                    rows = []
+                    for rank, (word, score) in enumerate(top_words, 1):
+                        rows.append({
+                            "Rank": rank,
+                            "Word": word,
+                            "TF-IDF Score": round(score, 6),
+                        })
 
-#     if skipped:
-#         print(f"Skipped (no year in filename): {', '.join(skipped)}\n")
+                    st.dataframe(
+                        rows,
+                        width="stretch",
+                        hide_index=True,
+                        column_config={
+                            "Rank": st.column_config.NumberColumn(width="small"),
+                            "Word": st.column_config.TextColumn(width="medium"),
+                            "TF-IDF Score": st.column_config.ProgressColumn(
+                                format="%.6f",
+                                min_value=0,
+                                max_value=top_words[0][1] if top_words else 1,
+                            ),
+                        },
+                    )
 
-#     labels = {
-#         "A": "2007-2013",
-#         "B": "2014-2020",
-#     }
-
-#     for key, period in labels.items():
-#         word_count = len(tokenize(docs[key])) if docs[key] else 0
-#         print(f"Period {key} ({period}): {word_count:,} tokens")
-
-#     if not docs["A"] and not docs["B"]:
-#         sys.exit("No matching files found. Check filenames contain a year like '2009'.")
-
-#     scores = tfidf_scores(docs)
-
-#     for key, period in labels.items():
-#         print(f"\n{'='*50}")
-#         print(f"  Top {args.top} words — Period {key} ({period})")
-#         print(f"{'='*50}")
-#         if not scores.get(key):
-#             print("  (no documents found for this period)")
-#             continue
-#         top_words = sorted(scores[key].items(), key=lambda x: x[1], reverse=True)[: args.top]
-#         for rank, (word, score) in enumerate(top_words, 1):
-#             print(f"  {rank:>2}. {word:<25} {score:.6f}")
-
-#     print()
-
-
-# if __name__ == "__main__":
-#     main()
+                    st.markdown("##### Context Windows (top 10 per word)")
+                    for word, _ in top_words:
+                        word_windows = text_windows.get(key, {}).get(word, [])[:10]
+                        if not word_windows:
+                            continue
+                        with st.expander(
+                            f"**{word}** — {len(text_windows.get(key, {}).get(word, []))} occurrences"
+                        ):
+                            ctx_rows = [{"#": i + 1, "Context": w} for i, w in enumerate(word_windows)]
+                            st.dataframe(
+                                ctx_rows,
+                                width="stretch",
+                                hide_index=True,
+                                column_config={
+                                    "#": st.column_config.NumberColumn(width="small"),
+                                    "Context": st.column_config.TextColumn(width="large"),
+                                },
+                            )
