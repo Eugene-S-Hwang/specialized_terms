@@ -228,7 +228,7 @@ else:
         selected_folder = manual
 
 corpus_btn = st.button("Select Folder", width="content")
-docs, skipped = None, []
+skipped = None, []
 if corpus_btn:
     for k in text_windows:
         text_windows[k].clear()
@@ -242,7 +242,8 @@ if corpus_btn:
             log_lines.append(item)
             log_container.markdown("\n".join(log_lines))
         else:
-            docs = item["docs"]
+            print("Works")
+            st.session_state["docs"] = item["docs"]
             skipped = item["skipped"]
 
     if skipped:
@@ -268,6 +269,7 @@ if tfidf_btn:
         st.error("Please select a valid folder first.")
     else:
         # Reset text_windows for a fresh run
+        docs = st.session_state["docs"]
 
         if not any(docs[k] for k in labels):
             st.error(
