@@ -25,12 +25,14 @@ labels = {
     "D": "2014-2020",
 }
 
-text_windows = {
-    "A": {},
-    "B": {},
-    "C": {},
-    "D": {},
-}
+# text_windows = {
+#     "A": {},
+#     "B": {},
+#     "C": {},
+#     "D": {},
+# }
+
+TOKEN_RE = re.compile(r"[a-zA-Z]+")
 
 def extract_year(filename: str):
     return filename[0:2]
@@ -111,15 +113,32 @@ def build_corpus(folder: str):
     if prev_year is not None:
         yield f"Finished processing year {display_year(prev_year)}"
 
-    for k, texts in docs.items():
-        for text in texts:
-            tokens = re.findall(r"[a-zA-Z]+", text.lower())
-            for i, t in enumerate(tokens):
-                if t not in STOP_WORDS and len(t) > 2:
-                    window = " ".join(tokens[max(0, i - 5) : i + 6])
-                    text_windows[k].setdefault(t, []).append(window)
+    # for k, texts in docs.items():
+    #     for text in texts:
+    #         tokens = re.findall(r"[a-zA-Z]+", text.lower())
+    #         for i, t in enumerate(tokens):
+    #             if t not in STOP_WORDS and len(t) > 2:
+    #                 window = " ".join(tokens[max(0, i - 5) : i + 6])
+    #                 text_windows[k].setdefault(t, []).append(window)
 
     yield {"docs": {k: " ".join(v) for k, v in docs.items()}, "skipped": skipped}
+
+def get_context_windows(docs: dict[str, list[str]], targets: set[str], period: str):
+    windows: dict[str, list[str]] = {}
+    tokens = TOKEN_RE.findall(docs[period].lower())
+    for i, t in enumerate(tokens):
+        if t in targets:
+            window = " ".join(tokens[max(0, i - 5): i + 5 + 1])
+            if(t not in windows):
+                windows[t] = [window]
+            else:
+                windows[t].append(window)
+
+    # for i, token in enumerate(tokens):
+    #     if token == word:
+    #         window = tokens[max(0, i - 10) : i + 10 + 1]
+    #         windows.append(" ".join(window))
+    return windows
 
 
 # ── TF-IDF ───────────────────────────────────────────────────────────────────
@@ -164,18 +183,23 @@ def bm_25_scores(docs: dict[str, str]) -> dict[str, dict[str, float]]:
     N = len(tokenized)
 
     # print(N)
+
     bm25 = BM25Okapi(list(tokenized.values()))
     labels = list(tokenized.keys())
 
-    vocab = set(word for doc in tokenized.values() for word in doc)
+    vocab = list({word for doc in tokenized.values() for word in doc})
 
-    scores: dict[str, dict[str, float]] = {}
+    score_matrix = np.array([bm25.get_scores([term]) for term in vocab])
+    # shape: (vocab_size, num_docs)
 
-    for term in vocab:
-        term_scores = bm25.get_scores([term])
-        for idx, val in enumerate(term_scores):
-            scores[labels[idx]][term] = val
-    
+    best_period_per_word = np.argmax(score_matrix, axis=1)
+
+    scores: dict[str, dict[str, float]] = {k: {} for k in labels}
+    for word_idx, period_idx in enumerate(best_period_per_word):
+        winner = labels[period_idx]
+        word   = vocab[word_idx]
+        scores[winner][word] = float(score_matrix[word_idx, period_idx])
+
     return scores
 
 
@@ -199,7 +223,7 @@ def find_folders_with_txt(root: str, max_depth: int = 3) -> list[str]:
 # ── UI ────────────────────────────────────────────────────────────────────────
 
 st.set_page_config(layout="wide")
-st.title("📊 TF-IDF Explorer")
+st.title("TF-IDF/BM-25 Explorer")
 st.caption("Compare word importance across four time periods (1993-1999 · 2000-2006 · 2007-2013 · 2014-2020)")
 
 st.divider()
@@ -230,10 +254,8 @@ else:
 corpus_btn = st.button("Select Folder", width="content")
 skipped = None, []
 if corpus_btn:
-    for k in text_windows:
-        text_windows[k].clear()
 
-    st.write("**📅 Processing folder:**")
+    st.write("**Processing folder:**")
     log_container = st.empty()
     log_lines: list[str] = []
 
@@ -242,7 +264,6 @@ if corpus_btn:
             log_lines.append(item)
             log_container.markdown("\n".join(log_lines))
         else:
-            print("Works")
             st.session_state["docs"] = item["docs"]
             skipped = item["skipped"]
 
@@ -252,6 +273,7 @@ if corpus_btn:
             + ", ".join(skipped[:10])
             + (" …" if len(skipped) > 10 else "")
         )
+    
 
 # Settings
 st.subheader("2. Settings")
@@ -277,10 +299,10 @@ if tfidf_btn:
                 "(e.g. 97, 03, 09, 15)."
             )
         else:
-            scores = tfidf_scores(docs)
-
             st.divider()
             st.subheader("Results")
+
+            scores = tfidf_scores(docs)
 
             # Token counts — one metric per period
             meta_cols = st.columns(4)
@@ -330,14 +352,15 @@ if tfidf_btn:
                     )
 
                     st.markdown("##### Context Windows (top 10 per word)")
+                    targets = set(word for word, _ in top_words)
+                    word_windows = get_context_windows(docs, targets, key)
                     for word, _ in top_words:
-                        word_windows = text_windows.get(key, {}).get(word, [])[:10]
                         if not word_windows:
                             continue
                         with st.expander(
-                            f"**{word}** — {len(text_windows.get(key, {}).get(word, []))} occurrences"
+                            f"**{word}** — {len(word_windows[word])} occurrences"
                         ):
-                            ctx_rows = [{"#": i + 1, "Context": w} for i, w in enumerate(word_windows)]
+                            ctx_rows = [{"#": i + 1, "Context": w} for i, w in enumerate(word_windows[word][:10])]
                             st.dataframe(
                                 ctx_rows,
                                 width="stretch",
@@ -353,6 +376,7 @@ if bm25_btn:
         st.error("Please select a valid folder first.")
     else:
         # Reset text_windows for a fresh run
+        docs = st.session_state["docs"]
 
         if not any(docs[k] for k in labels):
             st.error(
@@ -360,10 +384,10 @@ if bm25_btn:
                 "(e.g. 97, 03, 09, 15)."
             )
         else:
-            scores = bm_25_scores(docs)
-
             st.divider()
             st.subheader("Results")
+
+            scores = bm_25_scores(docs)
 
             # Token counts — one metric per period
             meta_cols = st.columns(4)
@@ -413,14 +437,15 @@ if bm25_btn:
                     )
 
                     st.markdown("##### Context Windows (top 10 per word)")
+                    targets = set(word for word, _ in top_words)
+                    word_windows = get_context_windows(docs, targets, key)
                     for word, _ in top_words:
-                        word_windows = text_windows.get(key, {}).get(word, [])[:10]
                         if not word_windows:
                             continue
                         with st.expander(
-                            f"**{word}** — {len(text_windows.get(key, {}).get(word, []))} occurrences"
+                            f"**{word}** — {len(word_windows[word])} occurrences"
                         ):
-                            ctx_rows = [{"#": i + 1, "Context": w} for i, w in enumerate(word_windows)]
+                            ctx_rows = [{"#": i + 1, "Context": w} for i, w in enumerate(word_windows[word][:10])]
                             st.dataframe(
                                 ctx_rows,
                                 width="stretch",
