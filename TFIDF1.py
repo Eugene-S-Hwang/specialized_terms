@@ -5,7 +5,7 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 from collections import Counter
 import streamlit as st
-
+import spacy
 
 STOP_WORDS = {
     "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -40,7 +40,10 @@ def extract_year(filename: str):
 
 def tokenize(text: str) -> list[str]:
     tokens = re.findall(r"[a-zA-Z]+", text.lower())
-    return [t for t in tokens if t not in STOP_WORDS and len(t) > 2]
+    blacklist = []
+    if "blacklist" in st.session_state:
+        blacklist = st.session_state["blacklist"]
+    return [t for t in tokens if t not in STOP_WORDS and t not in blacklist and len(t) > 2]
 
 
 def build_corpus(folder: str):
@@ -139,6 +142,31 @@ def get_context_windows(docs: dict[str, list[str]], targets: set[str], period: s
     #         window = tokens[max(0, i - 10) : i + 10 + 1]
     #         windows.append(" ".join(window))
     return windows
+
+
+# Named Entity Recognition (Prototype)
+def build_entity_blacklist(docs: dict[str, str], sample_size: int = 100_000) -> set[str]:
+    """
+    Run NER on a sample of the corpus and return a set of entity words to exclude.
+    sample_size limits how many characters to process per period to keep it fast.
+    """
+    nlp = spacy.load("en_core_web_sm")
+    nlp.select_pipes(enable=["ner"])   # disable parser/tagger for speed
+
+    ENTITY_TYPES = {"PERSON", "ORG", "GPE", "LOC", "FAC", "NORP"}
+    blacklist: set[str] = set()
+
+    for period, text in docs.items():
+        # Sample from the middle to avoid header/footer noise
+        sample = text[:sample_size]
+        doc = nlp(sample)
+        for ent in doc.ents:
+            if ent.label_ in ENTITY_TYPES:
+                # Add each token of the entity individually
+                for token in ent:
+                    blacklist.add(token.text.lower())
+
+    return blacklist
 
 
 # ── TF-IDF ───────────────────────────────────────────────────────────────────
@@ -273,6 +301,9 @@ if corpus_btn:
             + ", ".join(skipped[:10])
             + (" …" if len(skipped) > 10 else "")
         )
+    
+    if "docs" in st.session_state:
+        st.session_state["blacklist"] = build_entity_blacklist(st.session_state["docs"])
     
 
 # Settings
