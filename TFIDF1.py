@@ -15,7 +15,9 @@ STOP_WORDS = {
     "these", "those", "it", "its", "i", "we", "you", "he", "she", "they",
     "not", "as", "up", "if", "so", "also", "than", "into", "about",
     "which", "who", "what", "when", "where", "how", "all", "more", "no",
-    "their", "there", "then", "s", "t", "re", "ve", "ll", "d", "m",
+    "their", "there", "then", "s", "t", "re", "ve", "ll", "d", "m", "approac", "ligenc", 
+    "erimen", "ecause", "orks", "ectiv", "curren", "hiev", "ortan", "enden", "hniques", "ailable", 
+    "ision", "whi", "orresp", "https", "preprint", "github"
 }
 
 labels = {
@@ -38,12 +40,12 @@ def extract_year(filename: str):
     return filename[0:2]
 
 
-def tokenize(text: str) -> list[str]:
-    tokens = re.findall(r"[a-zA-Z]+", text.lower())
+def tokenize(text: list[str]) -> list[str]:
+    # tokens = re.findall(r"[a-zA-Z]+", text.lower())
     blacklist = []
     if "blacklist" in st.session_state:
         blacklist = st.session_state["blacklist"]
-    return [t for t in tokens if t not in STOP_WORDS and t not in blacklist and len(t) > 2]
+    return [t for t in text if t not in STOP_WORDS and t not in blacklist and len(t) > 2]
 
 
 def build_corpus(folder: str):
@@ -92,11 +94,6 @@ def build_corpus(folder: str):
             skipped.append(fname)
             continue
 
-        # Valid range: 97-99 (1997-1999) or 00-20 (2000-2020)
-        # if not ((97 <= y <= 99) or (0 <= y <= 20)):
-        #     skipped.append(fname)
-        #     continue
-
         period = year_to_period(year)
         if not period:
             skipped.append(fname)
@@ -104,48 +101,37 @@ def build_corpus(folder: str):
 
         path = os.path.join(folder, fname)
         with open(path, "r", encoding="utf-8", errors="replace") as fh:
-            text = fh.read()
+            text = fh.read().lower()
 
         if prev_year is not None and year != prev_year:
             yield f"Finished processing year {display_year(prev_year)}"
 
         prev_year = year
-        
-        docs[period].append(text)
+
+        tokens = TOKEN_RE.findall(text)
+        docs[period].append(tokens)
 
     if prev_year is not None:
         yield f"Finished processing year {display_year(prev_year)}"
 
-    # for k, texts in docs.items():
-    #     for text in texts:
-    #         tokens = re.findall(r"[a-zA-Z]+", text.lower())
-    #         for i, t in enumerate(tokens):
-    #             if t not in STOP_WORDS and len(t) > 2:
-    #                 window = " ".join(tokens[max(0, i - 5) : i + 6])
-    #                 text_windows[k].setdefault(t, []).append(window)
-
-    yield {"docs": {k: " ".join(v) for k, v in docs.items()}, "skipped": skipped}
+    # yield {"docs": {k: " ".join(v) for k, v in docs.items()}, "skipped": skipped}
+    yield {"docs": docs, "skipped": skipped}
 
 def get_context_windows(docs: dict[str, list[str]], targets: set[str], period: str):
     windows: dict[str, list[str]] = {}
-    tokens = TOKEN_RE.findall(docs[period].lower())
-    for i, t in enumerate(tokens):
-        if t in targets:
-            window = " ".join(tokens[max(0, i - 5): i + 5 + 1])
-            if(t not in windows):
-                windows[t] = [window]
-            else:
-                windows[t].append(window)
-
-    # for i, token in enumerate(tokens):
-    #     if token == word:
-    #         window = tokens[max(0, i - 10) : i + 10 + 1]
-    #         windows.append(" ".join(window))
+    # tokens = TOKEN_RE.findall((" ".join(docs[period])).lower())
+    for doc in docs[period]:
+        for i, t in enumerate(doc):
+            if t in targets:
+                window = doc[max(0, i - 5): i + 6]
+                windows.setdefault(t, []).append(" ".join(window))
+    
     return windows
 
 
-# Named Entity Recognition (Prototype)
-def build_entity_blacklist(docs: dict[str, str], sample_size: int = 100_000) -> set[str]:
+#blacklist with unjoined docs
+@st.cache_resource
+def build_entity_blacklist(corpus: dict[str, list[list[str]]]) -> set[str]:
     """
     Run NER on a sample of the corpus and return a set of entity words to exclude.
     sample_size limits how many characters to process per period to keep it fast.
@@ -156,15 +142,36 @@ def build_entity_blacklist(docs: dict[str, str], sample_size: int = 100_000) -> 
     ENTITY_TYPES = {"PERSON", "ORG", "GPE", "LOC", "FAC", "NORP"}
     blacklist: set[str] = set()
 
-    for period, text in docs.items():
-        # Sample from the middle to avoid header/footer noise
-        sample = text[:sample_size]
-        doc = nlp(sample)
-        for ent in doc.ents:
-            if ent.label_ in ENTITY_TYPES:
-                # Add each token of the entity individually
-                for token in ent:
-                    blacklist.add(token.text.lower())
+    for period, docs in corpus.items():
+
+        # 1. sample only a subset of documents
+        for doc in docs[:50]:
+
+            # 2. truncate tokens early (VERY important)
+            sample = doc[:2000]
+
+            # 3. convert small sample only (not full corpus)
+            text = " ".join(sample)
+
+            # 4. spaCy on small chunk
+            spacy_doc = nlp(text)
+
+            for ent in spacy_doc.ents:
+                if ent.label_ in ENTITY_TYPES:
+                    blacklist.update(
+                        token.text.lower() for token in ent
+                    )
+
+    # docs = {k: " ".join(v) for k, v in corpus.items()}
+    # for period, text in docs.items():
+    #     # Sample from the middle to avoid header/footer noise
+    #     sample = text[:sample_size]
+    #     doc = nlp(sample)
+    #     for ent in doc.ents:
+    #         if ent.label_ in ENTITY_TYPES:
+    #             # Add each token of the entity individually
+    #             for token in ent:
+    #                 blacklist.add(token.text.lower())
 
     return blacklist
 
@@ -177,56 +184,124 @@ def tf(tokens: list[str]) -> dict[str, float]:
     total = len(tokens)
     return {word: count / total for word, count in counts.items()}
 
-
-def tfidf_scores(docs: dict[str, str]) -> dict[str, dict[str, float]]:
+#tfidf with unjoined docs
+def tfidf_scores(docs: dict[str, list[list[str]]]) -> dict[str, dict[str, float]]:
     """
-    Compute TF-IDF for each document.
-    IDF = log( (1 + N) / (1 + df) ) + 1   [sklearn-style smooth IDF]
+    Compute TF-IDF for each period, multiplied by within-period document frequency.
+    docs: dict of period -> list of raw text strings from build_corpus
+
+    TF - term frequency of a word in a period (over joined text)
+    IDF = log((1 + N) / (1 + df))  [sklearn-style smooth IDF]
+        N  - number of periods
+        df - number of periods containing the word
+    within_period_df - fraction of documents in the period containing the word
     """
-    tokenized = {k: tokenize(v) for k, v in docs.items()}
-    N = len(tokenized)
+    # Join each period's docs into one string for TF computation
+    joined    = {k: [t for sublist in v for t in sublist] for k, v in docs.items()}
+    tokenized = {k: tokenize(v) for k, v in joined.items()}
+    N         = len(tokenized)
 
-    # print(N)
+    counts  = {}
+    lengths = {}
+    for label, tokens in tokenized.items():
+        counts[label]  = Counter(tokens)
+        lengths[label] = len(tokens)
 
-    # document frequency
+    # IDF over periods
     df: Counter = Counter()
     for tokens in tokenized.values():
         for word in set(tokens):
             df[word] += 1
 
+    # Within-period document frequency: fraction of docs in period containing the word
+    period_doc_counts: dict[str, Counter] = {k: Counter() for k in docs}
+    period_num_docs:   dict[str, int]     = {}
+    for label, text_list in docs.items():
+        period_num_docs[label] = len(text_list)
+        for text in text_list:
+            for word in set(tokenize(text)):
+                period_doc_counts[label][word] += 1
+
     scores: dict[str, dict[str, float]] = {}
-    for label, tokens in tokenized.items():
-        tf_vals = tf(tokens)
+    for label, token_counts in counts.items():
         scores[label] = {}
-        for word, tf_val in tf_vals.items():
-            idf = math.log((1 + N) / (1 + df[word]))
-            scores[label][word] = tf_val * idf
+        for word, tf_val in token_counts.items():
+            tf               = tf_val / lengths[label]
+            idf              = math.log((1 + N) / (1 + df[word]))
+            within_period_df = period_doc_counts[label][word] / period_num_docs[label]
+            scores[label][word] = tf * idf * math.log(within_period_df + 1)
 
     return scores
 
 # ── BM-25 ───────────────────────────────────────────────────────────────────
 
-def bm_25_scores(docs: dict[str, str]) -> dict[str, dict[str, float]]:
-    tokenized = {k: tokenize(v) for k, v in docs.items()}
-    N = len(tokenized)
+# def bm_25_scores(docs: dict[str, str]) -> dict[str, dict[str, float]]:
+#     tokenized = {k: tokenize(v) for k, v in docs.items()}
+#     N = len(tokenized)
 
-    # print(N)
+#     # print(N)
 
-    bm25 = BM25Okapi(list(tokenized.values()))
-    labels = list(tokenized.keys())
+#     bm25 = BM25Okapi(list(tokenized.values()))
+#     labels = list(tokenized.keys())
 
-    vocab = list({word for doc in tokenized.values() for word in doc})
+#     vocab = list({word for doc in tokenized.values() for word in doc})
 
+#     score_matrix = np.array([bm25.get_scores([term]) for term in vocab])
+#     # shape: (vocab_size, num_docs)
+
+#     best_period_per_word = np.argmax(score_matrix, axis=1)
+
+#     scores: dict[str, dict[str, float]] = {k: {} for k in labels}
+#     for word_idx, period_idx in enumerate(best_period_per_word):
+#         winner = labels[period_idx]
+#         word   = vocab[word_idx]
+#         scores[winner][word] = float(score_matrix[word_idx, period_idx])
+
+#     return scores
+
+def bm_25_scores(docs: dict[str, list[list[str]]]) -> dict[str, dict[str, float]]:
+    # Tokenize each individual document
+    tokenized_periods: dict[str, list[list[str]]] = {
+        k: [tokenize(text) for text in text_list]
+        for k, text_list in docs.items()
+    }
+
+    # Flatten all documents, tracking which period each belongs to
+    period_labels = []
+    all_tokenized = []
+    for period, doc_list in tokenized_periods.items():
+        for doc in doc_list:
+            all_tokenized.append(doc)
+            period_labels.append(period)
+
+    bm25   = BM25Okapi(all_tokenized)
+    labels = list(tokenized_periods.keys())
+    vocab  = list({word for doc in all_tokenized for word in doc})
+
+    # Score matrix over all individual documents
     score_matrix = np.array([bm25.get_scores([term]) for term in vocab])
-    # shape: (vocab_size, num_docs)
+    # shape: (vocab_size, total_num_docs)
 
-    best_period_per_word = np.argmax(score_matrix, axis=1)
+    # Average BM25 scores per period
+    period_indices = {
+        period: [i for i, p in enumerate(period_labels) if p == period]
+        for period in labels
+    }
+
+    avg_score_matrix = np.zeros((len(vocab), len(labels)))
+    for j, period in enumerate(labels):
+        indices = period_indices[period]
+        avg_score_matrix[:, j] = score_matrix[:, indices].mean(axis=1)
+    # shape: (vocab_size, num_periods)
+
+    # Keep only words where this period has the highest average score
+    best_period_per_word = np.argmax(avg_score_matrix, axis=1)
 
     scores: dict[str, dict[str, float]] = {k: {} for k in labels}
     for word_idx, period_idx in enumerate(best_period_per_word):
         winner = labels[period_idx]
         word   = vocab[word_idx]
-        scores[winner][word] = float(score_matrix[word_idx, period_idx])
+        scores[winner][word] = float(avg_score_matrix[word_idx, period_idx])
 
     return scores
 
@@ -338,7 +413,7 @@ if tfidf_btn:
             # Token counts — one metric per period
             meta_cols = st.columns(4)
             for i, (key, period) in enumerate(labels.items()):
-                count = len(tokenize(docs[key])) if docs[key] else 0
+                count = len([t for doc in docs[key] for t in doc]) if docs[key] else 0
                 meta_cols[i].metric(
                     label=f"Period {key} ({period})",
                     value=f"{count:,} words",
@@ -423,7 +498,7 @@ if bm25_btn:
             # Token counts — one metric per period
             meta_cols = st.columns(4)
             for i, (key, period) in enumerate(labels.items()):
-                count = len(tokenize(docs[key])) if docs[key] else 0
+                count = len([t for doc in docs[key] for t in doc]) if docs[key] else 0
                 meta_cols[i].metric(
                     label=f"Period {key} ({period})",
                     value=f"{count:,} words",
