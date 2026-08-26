@@ -1,5 +1,5 @@
 .env
-ehwang2@login.babel.cs.cmu.edu
-test_download_papers
 .DS_Store
 TFIDF_BM25_Analyses
+test_download_papers
+test_extraction
